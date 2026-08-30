@@ -1,0 +1,42 @@
+# Gradle / Android
+.gradle/
+**/build/
+local.properties
+
+# IDE
+.idea/
+*.iml
+*.hprof
+
+# Logs / temporary files
+*.log
+*.tmp
+*.temp
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Signing / credentials
+*.keystore
+*.jks
+*.pem
+*.p12
+
+# Private exports / documents
+*.apk
+*.aab
+private-documents/
+private-exports/
+
+# Local AI model binaries
+models/**/*.bin
+models/**/*.onnx
+models/**/*.tflite
+models/**/*.gguf
+models/**/*.safetensors
+
+# Release-generated output
+release/artifacts/
+release/reports/generated/
