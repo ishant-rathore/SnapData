@@ -63,12 +63,15 @@ fun SnapDataLandingScreen(
     }
 
     fun launchApp() {
-        if (viewModel.isLoggedIn) {
+        if (!viewModel.hasCompletedUserGuide) {
+            viewModel.startUserGuide()
+        } else if (viewModel.isLoggedIn) {
             viewModel.navigateTo(AppScreen.HOME)
         } else if (viewModel.isFirebaseConfigured) {
             viewModel.navigateTo(AppScreen.AUTH_WELCOME)
         } else {
             viewModel.continueAsGuest()
+            viewModel.navigateTo(AppScreen.HOME)
         }
     }
 

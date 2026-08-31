@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import com.example.snapdata.auth.data.AuthRepository
 import com.example.snapdata.auth.data.SecureSessionStorage
 import com.example.snapdata.auth.domain.*
+import com.example.snapdata.ui.screens.guide.UserGuidePreferences
 import java.io.File
 import java.io.FileOutputStream
 
@@ -37,6 +38,7 @@ enum class AppScreen {
     FORGOT_PASSWORD,
     VERIFY_EMAIL,
     AUTH_SUCCESS,
+    USER_GUIDE,
     HOME,
     ACQUISITION,
     PREPROCESSING,
@@ -231,6 +233,7 @@ class SnapDataViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     private val protectedScreens = setOf(
+        AppScreen.USER_GUIDE,
         AppScreen.HOME,
         AppScreen.ACQUISITION,
         AppScreen.PREPROCESSING,
@@ -240,6 +243,32 @@ class SnapDataViewModel(
         AppScreen.HISTORY,
         AppScreen.SETTINGS
     )
+
+    private val guidePrefs = UserGuidePreferences(application)
+
+    val hasCompletedUserGuide: Boolean
+        get() = guidePrefs.hasCompletedUserGuide
+
+    fun startUserGuide() {
+        if (!isLoggedIn) {
+            continueAsGuest()
+        }
+        navigateTo(AppScreen.USER_GUIDE)
+    }
+
+    fun completeUserGuide() {
+        guidePrefs.hasCompletedUserGuide = true
+        navigateTo(AppScreen.HOME)
+    }
+
+    fun skipUserGuide() {
+        guidePrefs.hasCompletedUserGuide = true
+        navigateTo(AppScreen.HOME)
+    }
+
+    fun resetUserGuide() {
+        guidePrefs.resetGuide()
+    }
 
     fun navigateTo(screen: AppScreen) {
         val currentAuthState = authState.value

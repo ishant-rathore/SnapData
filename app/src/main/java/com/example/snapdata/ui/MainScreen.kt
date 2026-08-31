@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.snapdata.ui.screens.*
 import com.example.snapdata.ui.screens.auth.*
+import com.example.snapdata.ui.screens.guide.UserGuideScreen
 import com.example.snapdata.ui.screens.landing.LandingScreen
 import com.example.snapdata.ui.theme.*
 
@@ -23,7 +24,7 @@ import com.example.snapdata.ui.theme.*
 fun MainScreen(viewModel: SnapDataViewModel) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Full-screen Pre-Auth & Landing experiences without BottomBar/NavRail
+    // Full-screen Pre-Auth, Guide & Landing experiences without BottomBar/NavRail
     when (uiState.currentScreen) {
         AppScreen.SPLASH -> {
             SnapDataSplashScreen(
@@ -35,6 +36,10 @@ fun MainScreen(viewModel: SnapDataViewModel) {
         }
         AppScreen.LANDING -> {
             LandingScreen(viewModel)
+            return
+        }
+        AppScreen.USER_GUIDE -> {
+            UserGuideScreen(viewModel)
             return
         }
         AppScreen.AUTH_WELCOME -> {
@@ -272,6 +277,7 @@ private fun ScreenContent(screen: AppScreen, viewModel: SnapDataViewModel) {
         AppScreen.HISTORY -> HistoryScreen(viewModel)
         AppScreen.SETTINGS -> SettingsScreen(viewModel)
         AppScreen.LANDING -> LandingScreen(viewModel)
+        AppScreen.USER_GUIDE -> UserGuideScreen(viewModel)
         AppScreen.AUTH_WELCOME -> AuthWelcomeScreen(
             onSignInClick = { viewModel.navigateTo(AppScreen.SIGN_IN) },
             onCreateAccountClick = { viewModel.navigateTo(AppScreen.SIGN_UP) },

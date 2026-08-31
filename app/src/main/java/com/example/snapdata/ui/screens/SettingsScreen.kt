@@ -385,6 +385,52 @@ fun SettingsScreen(viewModel: SnapDataViewModel) {
                 }
             }
 
+            // 4. Help & Interactive User Guide
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Help & Tutorial",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = SnapDataBlack,
+                            fontSize = 15.sp
+                        )
+
+                        Text(
+                            text = "Learn how to capture documents, enhance images, extract structured data, edit tables, and export with SnapData.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            fontSize = 11.5.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        SnapDataPrimaryButton(
+                            text = "Replay App Guide",
+                            icon = Icons.Outlined.School,
+                            onClick = {
+                                viewModel.startUserGuide()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            testTag = "replay_user_guide_btn"
+                        )
+                    }
+                }
+            }
+
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
