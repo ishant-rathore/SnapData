@@ -1,0 +1,6 @@
+{
+  "name": "SnapData",
+  "description": "AI-Powered Intelligent Document Processing & Structured Data Extraction System",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
