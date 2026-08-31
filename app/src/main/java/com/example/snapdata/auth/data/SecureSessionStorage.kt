@@ -24,7 +24,7 @@ class SecureSessionStorage(context: Context? = null) {
         context?.let { ctx ->
             createEncryptedPrefs(ctx) ?: createFallbackPrefs(ctx)
         }
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
         AppLogger.w(AppLogger.LogDomain.AUTH, "Failed to initialize SecureSessionStorage: ${e.message}")
         null
     }
@@ -45,7 +45,7 @@ class SecureSessionStorage(context: Context? = null) {
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             AppLogger.w(AppLogger.LogDomain.AUTH, "EncryptedSharedPreferences unavailable, using fallback: ${e.message}")
             null
         }

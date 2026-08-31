@@ -70,8 +70,13 @@ data class ProcessingOptions(
     val binarize: Boolean = false,
     val deskew: Boolean = true,
     val forceOfflineAi: Boolean = true,
-    val enableCloudAi: Boolean = false
-)
+    val enableCloudAi: Boolean = false,
+    val detectTables: Boolean = true,
+    val enablePiiRedaction: Boolean = false
+) {
+    val autoContrast: Boolean get() = enhanceContrast
+    val useOfflineOcr: Boolean get() = forceOfflineAi
+}
 
 enum class ExportFormat(val extension: String, val mimeType: String, val displayName: String) {
     EXCEL("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Excel Workbook (.xlsx)"),

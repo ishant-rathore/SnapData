@@ -33,6 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "snapdata_database"
                 )
                     .addMigrations(MIGRATION_1_2)
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

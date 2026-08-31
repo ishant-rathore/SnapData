@@ -1,7 +1,9 @@
 package com.example.snapdata.ui.screens
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -9,20 +11,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,261 +33,392 @@ import androidx.compose.ui.unit.sp
 import com.example.snapdata.model.ProcessingStage
 import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
-import com.example.snapdata.ui.theme.PrimaryBlue
+import com.example.snapdata.ui.components.SnapDataPrimaryButton
+import com.example.snapdata.ui.components.SnapDataSecondaryButton
+import com.example.snapdata.ui.illustrations.ProcessingPipelineIllustration
+import com.example.snapdata.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProcessingScreen(viewModel: SnapDataViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val progress = uiState.processingProgress
     val isError = progress.stage == ProcessingStage.ERROR
 
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.95f,
-        targetValue = 1.05f,
+    // Smooth animation for active scanner stage
+    val infiniteTransition = rememberInfiniteTransition(label = "processing_pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(800, easing = FastOutSlowInEasing),
+            animation = tween(900, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pulseScale"
+        label = "pulseAlpha"
     )
 
-    Scaffold { padding ->
+    // Calculate stage status indices:
+    // Stage 1: Pre-processing (ACQUISITION, PREPROCESSING)
+    // Stage 2: OCR Processing (OCR, TABLE_DETECTION)
+    // Stage 3: AI Analysis (AI_ANALYSIS, STRUCTURED_EXTRACTION)
+    // Stage 4: Finalizing (VALIDATION, COMPLETED)
+    val currentStageIndex = when (progress.stage) {
+        ProcessingStage.IDLE, ProcessingStage.ACQUISITION, ProcessingStage.PREPROCESSING -> 0
+        ProcessingStage.OCR, ProcessingStage.TABLE_DETECTION -> 1
+        ProcessingStage.AI_ANALYSIS, ProcessingStage.STRUCTURED_EXTRACTION -> 2
+        ProcessingStage.VALIDATION, ProcessingStage.COMPLETED -> 3
+        ProcessingStage.ERROR, ProcessingStage.CANCELLED -> -1
+    }
+
+    val progressPercent = when (currentStageIndex) {
+        0 -> 25
+        1 -> 50
+        2 -> 75
+        3 -> 100
+        else -> 0
+    }
+
+    Scaffold(
+        containerColor = WarmCreamBackground,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = if (isError) "Processing Error" else "Processing Document",
+                        fontWeight = FontWeight.Bold,
+                        color = SnapDataBlack,
+                        fontSize = 18.sp
+                    )
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            viewModel.cancelProcessing()
+                            viewModel.navigateTo(AppScreen.HOME)
+                        },
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag("nav_back_from_processing")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Cancel & Back",
+                            tint = SnapDataBlack
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = WarmCreamBackground)
+            )
+        }
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Header
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(top = 16.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Document Title Subtitle
                 Text(
-                    text = if (isError) "Processing Failure" else "Processing Document",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = uiState.activeTitle.ifBlank { "Analyzing content..." },
+                    text = uiState.activeTitle.ifBlank { "Document_001.pdf" },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextSecondary,
+                    fontSize = 13.sp
                 )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            // Center Pulse & Stage Tracker / Error Card
-            if (isError) {
+                // Minimalist Editorial Document Processing Pipeline Illustration
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp)
-                        .testTag("processing_error_card"),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    shape = RoundedCornerShape(16.dp)
+                        .shadow(2.dp, RoundedCornerShape(20.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
                 ) {
                     Column(
-                        modifier = Modifier.padding(24.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 18.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.error),
-                            contentAlignment = Alignment.Center
+                        ProcessingPipelineIllustration(
+                            currentStepIndex = if (isError) 0 else currentStageIndex,
+                            height = 95.dp
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
+                            Text(
+                                text = "1. Document",
+                                fontSize = 10.sp,
+                                fontWeight = if (currentStageIndex == 0) FontWeight.Bold else FontWeight.Medium,
+                                color = if (currentStageIndex == 0) SnapDataRed else TextSecondary
+                            )
+                            Text(
+                                text = "2. Scanner",
+                                fontSize = 10.sp,
+                                fontWeight = if (currentStageIndex == 1) FontWeight.Bold else FontWeight.Medium,
+                                color = if (currentStageIndex == 1) SnapDataRed else TextSecondary
+                            )
+                            Text(
+                                text = "3. AI Sparkle",
+                                fontSize = 10.sp,
+                                fontWeight = if (currentStageIndex == 2) FontWeight.Bold else FontWeight.Medium,
+                                color = if (currentStageIndex == 2) SnapDataRed else TextSecondary
+                            )
+                            Text(
+                                text = "4. Structured Data",
+                                fontSize = 10.sp,
+                                fontWeight = if (currentStageIndex >= 3) FontWeight.Bold else FontWeight.Medium,
+                                color = if (currentStageIndex >= 3) SnapDataRed else TextSecondary
                             )
                         }
+                    }
+                }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                        Text(
-                            text = "Extraction Error",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                // Error Card if state is ERROR
+                if (isError) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color(0xFFF5C2C4), RoundedCornerShape(16.dp))
+                            .testTag("processing_error_card"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = SnapDataRedLight)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = SnapDataRed, modifier = Modifier.size(32.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Document Extraction Failed",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataRed
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = progress.error ?: "Unable to read document contents. Please check image clarity and try again.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextDark,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    // 4-Stage Stepper Tracker Card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(2.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardWhite)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Step 1: Pre-processing
+                            ProcessingStepRow(
+                                stepNumber = 1,
+                                title = "Pre-processing",
+                                subtitle = "Enhancing image quality",
+                                isDone = currentStageIndex > 0,
+                                isActive = currentStageIndex == 0
+                            )
+
+                            // Step 2: OCR Processing
+                            ProcessingStepRow(
+                                stepNumber = 2,
+                                title = "OCR Processing",
+                                subtitle = "Extracting text from document",
+                                isDone = currentStageIndex > 1,
+                                isActive = currentStageIndex == 1
+                            )
+
+                            // Step 3: AI Analysis
+                            ProcessingStepRow(
+                                stepNumber = 3,
+                                title = "AI Analysis",
+                                subtitle = "Understanding structure & data",
+                                isDone = currentStageIndex > 2,
+                                isActive = currentStageIndex == 2
+                            )
+
+                            // Step 4: Finalizing
+                            ProcessingStepRow(
+                                stepNumber = 4,
+                                title = "Finalizing",
+                                subtitle = "Preparing results",
+                                isDone = currentStageIndex >= 3,
+                                isActive = currentStageIndex == 3
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Red Progress Bar + Percentage
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { progressPercent / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .testTag("processing_progress_bar"),
+                            color = SnapDataRed,
+                            trackColor = Color(0xFFF3EAE4)
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = progress.error ?: progress.detailMessage.ifBlank { "Failed to extract document contents. The file may be corrupt, password-protected, or in an unsupported format." },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            textAlign = TextAlign.Center
+                            text = "$progressPercent% complete",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary,
+                            fontSize = 12.sp
                         )
                     }
-                }
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(vertical = 24.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(110.dp)
-                            .scale(pulseScale)
-                            .clip(CircleShape)
-                            .background(PrimaryBlue.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(76.dp)
-                                .clip(CircleShape)
-                                .background(PrimaryBlue),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = when (progress.stage) {
-                                    ProcessingStage.ACQUISITION -> Icons.Default.DocumentScanner
-                                    ProcessingStage.PREPROCESSING -> Icons.Default.Tune
-                                    ProcessingStage.OCR -> Icons.Default.TextFields
-                                    ProcessingStage.AI_ANALYSIS -> Icons.Default.Psychology
-                                    ProcessingStage.STRUCTURED_EXTRACTION -> Icons.AutoMirrored.Filled.FormatListBulleted
-                                    ProcessingStage.TABLE_DETECTION -> Icons.Default.TableChart
-                                    ProcessingStage.VALIDATION, ProcessingStage.COMPLETED -> Icons.Default.CheckCircle
-                                    else -> Icons.Default.AutoAwesome
-                                },
-                                contentDescription = "Processing stage icon",
-                                tint = Color.White,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(28.dp))
-
-                    Text(
-                        text = progress.stage.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryBlue
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = progress.detailMessage.ifBlank { progress.stage.description },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Progress Bar
-                    val progressRatio = if (progress.stage == ProcessingStage.OCR && progress.totalSteps > 1) {
-                        (progress.currentStep.toFloat() / progress.totalSteps.toFloat()).coerceIn(0f, 1f)
-                    } else {
-                        progress.stage.progressPercent / 100f
-                    }
-
-                    val stepLabel = if (progress.stage == ProcessingStage.OCR && progress.totalSteps > 1) {
-                        "Processing Page ${progress.currentStep} of ${progress.totalSteps}"
-                    } else {
-                        "${(progressRatio * 100).toInt()}% Completed (Step ${progress.currentStep} of ${progress.totalSteps})"
-                    }
-
-                    LinearProgressIndicator(
-                        progress = { progressRatio },
-                        modifier = Modifier
-                            .fillMaxWidth(0.85f)
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(5.dp))
-                            .semantics { contentDescription = stepLabel }
-                            .testTag("processing_progress_bar"),
-                        color = PrimaryBlue,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = stepLabel,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Bottom Actions (Cancel or Recovery options on error)
+            // Bottom Actions
             if (isError) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Button(
+                    SnapDataPrimaryButton(
+                        text = "Retry Processing",
+                        icon = Icons.Default.Refresh,
                         onClick = { viewModel.startProcessingPipeline() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .testTag("error_retry_processing_btn"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Retry Extraction", color = Color.White, fontWeight = FontWeight.Bold)
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                        testTag = "error_retry_btn"
+                    )
 
-                    OutlinedButton(
+                    SnapDataSecondaryButton(
+                        text = "Return to Acquisition",
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
                         onClick = { viewModel.navigateTo(AppScreen.ACQUISITION) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .testTag("error_return_acquisition_btn"),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Return to Document Acquisition")
-                    }
-
-                    TextButton(
-                        onClick = { viewModel.navigateTo(AppScreen.HOME) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("error_return_home_btn")
-                    ) {
-                        Icon(Icons.Default.Home, contentDescription = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Return to Home")
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                        testTag = "error_back_btn"
+                    )
                 }
             } else {
-                OutlinedButton(
+                SnapDataSecondaryButton(
+                    text = "Cancel Extraction",
+                    icon = Icons.Default.Close,
                     onClick = { viewModel.cancelProcessing() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .testTag("cancel_processing_btn"),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Cancel Extraction", fontWeight = FontWeight.SemiBold)
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = "cancel_processing_btn"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProcessingStepRow(
+    stepNumber: Int,
+    title: String,
+    subtitle: String,
+    isDone: Boolean,
+    isActive: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Status indicator circle
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(
+                    when {
+                        isDone -> SnapDataRed
+                        isActive -> SnapDataRedLight
+                        else -> Color(0xFFF5F3ED)
+                    }
+                )
+                .border(
+                    width = if (isActive) 1.5.dp else 1.dp,
+                    color = if (isActive) SnapDataRed else if (isDone) SnapDataRed else LightBorder,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isDone -> {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Done",
+                        tint = CardWhite,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                isActive -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = SnapDataRed
+                    )
+                }
+                else -> {
+                    Text(
+                        text = stepNumber.toString(),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary
+                    )
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        // Title and Subtitle
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (isActive || isDone) FontWeight.Bold else FontWeight.Medium,
+                color = if (isActive || isDone) SnapDataBlack else TextSecondary,
+                fontSize = 14.sp
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                fontSize = 11.sp
+            )
         }
     }
 }

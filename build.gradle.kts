@@ -7,7 +7,3 @@ plugins {
     alias(libs.plugins.secrets) apply false
 }
 
-allprojects {
-    layout.buildDirectory.set(file("C:/Users/ishan/.gradle/builds/snapdata/${project.name}"))
-}
-

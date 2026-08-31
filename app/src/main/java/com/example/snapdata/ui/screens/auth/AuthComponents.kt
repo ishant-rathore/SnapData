@@ -31,6 +31,8 @@ import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.snapdata.ui.components.branding.SnapDataLogo
+import com.example.snapdata.ui.components.branding.SnapDataLogoVariant
 import com.example.snapdata.ui.theme.*
 
 /**
@@ -61,25 +63,17 @@ fun SnapDataAuthHeader(
                     tint = SnapDataBlack
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(28.dp)
-                    .background(SnapDataRed, RoundedCornerShape(2.dp))
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "SNAPDATA",
-                style = MaterialTheme.typography.labelLarge,
-                color = SnapDataBlack,
-                letterSpacing = 2.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        SnapDataLogo(
+            variant = SnapDataLogoVariant.FULL_HORIZONTAL,
+            iconSize = 32.dp,
+            wordmarkSize = 18.sp,
+            taglineSize = 8.sp,
+            isDarkBackground = false,
+            showTagline = true
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 

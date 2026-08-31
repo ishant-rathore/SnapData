@@ -92,4 +92,14 @@ class DocumentRepository(context: Context) {
             throw e
         }
     }
+
+    suspend fun deleteAllDocuments() {
+        try {
+            documentDao.deleteAllDocuments()
+            AppLogger.i(AppLogger.LogDomain.DATABASE, "Cleared all saved documents from database")
+        } catch (e: Exception) {
+            AppLogger.e(AppLogger.LogDomain.DATABASE, "Failed to clear all documents: ${e.localizedMessage}", e)
+            throw e
+        }
+    }
 }

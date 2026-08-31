@@ -29,6 +29,7 @@ import java.io.File
 import java.io.FileOutputStream
 
 enum class AppScreen {
+    SPLASH,
     LANDING,
     AUTH_WELCOME,
     SIGN_IN,
@@ -111,11 +112,27 @@ data class UiState(
 
 class SnapDataViewModel(
     application: Application,
-    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
-    private val authRepository: AuthRepository = AuthRepository.create(
-        SecureSessionStorage(application)
-    )
+    private val savedStateHandle: SavedStateHandle,
+    private val authRepository: AuthRepository
 ) : AndroidViewModel(application) {
+
+    constructor(application: Application) : this(
+        application = application,
+        savedStateHandle = SavedStateHandle(),
+        authRepository = AuthRepository.create(
+            SecureSessionStorage(application),
+            application
+        )
+    )
+
+    constructor(application: Application, savedStateHandle: SavedStateHandle) : this(
+        application = application,
+        savedStateHandle = savedStateHandle,
+        authRepository = AuthRepository.create(
+            SecureSessionStorage(application),
+            application
+        )
+    )
 
 
     companion object {
@@ -130,6 +147,8 @@ class SnapDataViewModel(
 
     val authState: StateFlow<AuthState> = authRepository.authState
     val currentUser: AuthUser? get() = authRepository.currentUser
+    val isLoggedIn: Boolean get() = currentUser != null
+    val isFirebaseConfigured: Boolean get() = authRepository.isFirebaseConfigured
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -138,44 +157,59 @@ class SnapDataViewModel(
     private var activeExportJob: Job? = null
 
     init {
-        // Check session restoration on startup
-        viewModelScope.launch {
-            authRepository.restoreSession()
-        }
+        // Prototype requirement: Always start from Landing Page and reset/ignore saved navigation state
+        savedStateHandle.remove<String>(KEY_CURRENT_SCREEN)
 
-        // Restore pending camera URI or active document state across process recreation
-        val restoredCameraUriStr = savedStateHandle.get<String>(KEY_PENDING_CAMERA_URI)
-        if (!restoredCameraUriStr.isNullOrBlank()) {
+        // Safe session restoration on startup
+        viewModelScope.launch {
             try {
-                val restoredUri = Uri.parse(restoredCameraUriStr)
-                _uiState.update { it.copy(pendingCameraUri = restoredUri) }
-            } catch (e: Exception) {
-                AppLogger.w(AppLogger.LogDomain.CAMERA, "Failed to restore pending camera URI: ${e.localizedMessage}")
+                authRepository.restoreSession()
+            } catch (t: Throwable) {
+                AppLogger.w(AppLogger.LogDomain.AUTH, "Session restoration fallback: ${t.localizedMessage}")
             }
         }
 
-        val restoredImagePath = savedStateHandle.get<String>(KEY_ACTIVE_IMAGE_PATH)
-        if (!restoredImagePath.isNullOrBlank()) {
-            val file = File(restoredImagePath)
-            if (file.exists() && file.length() > 0) {
-                val restoredBitmap = ImagePreprocessor.loadBitmapFromUri(application, Uri.fromFile(file))
-                if (restoredBitmap != null) {
-                    _uiState.update {
-                        it.copy(
-                            activeBitmap = restoredBitmap,
-                            activeImagePath = file.absolutePath
-                        )
+        // Restore pending camera URI or active document state across process recreation safely
+        try {
+            val restoredCameraUriStr = savedStateHandle.get<String>(KEY_PENDING_CAMERA_URI)
+            if (!restoredCameraUriStr.isNullOrBlank()) {
+                val restoredUri = Uri.parse(restoredCameraUriStr)
+                _uiState.update { it.copy(pendingCameraUri = restoredUri) }
+            }
+        } catch (e: Exception) {
+            AppLogger.w(AppLogger.LogDomain.CAMERA, "Failed to restore pending camera URI: ${e.localizedMessage}")
+        }
+
+        try {
+            val restoredImagePath = savedStateHandle.get<String>(KEY_ACTIVE_IMAGE_PATH)
+            if (!restoredImagePath.isNullOrBlank()) {
+                val file = File(restoredImagePath)
+                if (file.exists() && file.length() > 0) {
+                    val restoredBitmap = ImagePreprocessor.loadBitmapFromUri(application, Uri.fromFile(file))
+                    if (restoredBitmap != null) {
+                        _uiState.update {
+                            it.copy(
+                                activeBitmap = restoredBitmap,
+                                activeImagePath = file.absolutePath
+                            )
+                        }
                     }
                 }
             }
+        } catch (e: Exception) {
+            AppLogger.w(AppLogger.LogDomain.IMAGE, "Failed to restore active image: ${e.localizedMessage}")
         }
 
-        val restoredPdfPath = savedStateHandle.get<String>(KEY_ACTIVE_PDF_PATH)
-        if (!restoredPdfPath.isNullOrBlank()) {
-            val file = File(restoredPdfPath)
-            if (file.exists() && file.length() > 0) {
-                setPdfUri(Uri.fromFile(file))
+        try {
+            val restoredPdfPath = savedStateHandle.get<String>(KEY_ACTIVE_PDF_PATH)
+            if (!restoredPdfPath.isNullOrBlank()) {
+                val file = File(restoredPdfPath)
+                if (file.exists() && file.length() > 0) {
+                    setPdfUri(Uri.fromFile(file))
+                }
             }
+        } catch (e: Exception) {
+            AppLogger.w(AppLogger.LogDomain.PDF, "Failed to restore active PDF: ${e.localizedMessage}")
         }
     }
 
@@ -216,7 +250,6 @@ class SnapDataViewModel(
             screen
         }
 
-        savedStateHandle[KEY_CURRENT_SCREEN] = target.name
         _uiState.update {
             it.copy(
                 currentScreen = target,
@@ -944,6 +977,19 @@ class SnapDataViewModel(
         }
     }
 
+    fun clearSavedDocuments() {
+        viewModelScope.launch {
+            try {
+                repository.deleteAllDocuments()
+                _uiState.update { it.copy(activeDocId = 0, isDocumentSaved = false) }
+            } catch (e: Exception) {
+                val dbErr = AppError.DatabaseError.WriteFailed("Failed to clear documents: ${e.localizedMessage}")
+                AppLogger.e(AppLogger.LogDomain.DATABASE, "Failed to clear documents: ${e.localizedMessage}", e)
+                _uiState.update { it.copy(databaseError = dbErr) }
+            }
+        }
+    }
+
     // --- Export Operations ---
     fun setSelectedExportFormat(format: ExportFormat) {
         _uiState.update {
@@ -1082,6 +1128,59 @@ class SnapDataViewModel(
 
     fun setOcrLanguage(language: String) {
         _uiState.update { it.copy(selectedOcrLanguage = language) }
+    }
+
+    data class CacheStats(val fileCount: Int, val totalBytes: Long)
+    data class CacheClearResult(val filesDeleted: Int, val bytesFreed: Long)
+
+    fun getCacheStats(): CacheStats {
+        var count = 0
+        var bytes = 0L
+        fun calc(file: File) {
+            if (file.isDirectory) {
+                file.listFiles()?.forEach { calc(it) }
+            } else if (file.isFile) {
+                count++
+                bytes += file.length()
+            }
+        }
+        try {
+            val app = getApplication<Application>()
+            app.cacheDir?.listFiles()?.forEach { calc(it) }
+            app.externalCacheDir?.listFiles()?.forEach { calc(it) }
+        } catch (e: Exception) {
+            AppLogger.w(AppLogger.LogDomain.STORAGE, "Cache calculation warning: ${e.localizedMessage}")
+        }
+        return CacheStats(count, bytes)
+    }
+
+    fun clearTemporaryCache(): CacheClearResult {
+        var filesDeleted = 0
+        var bytesFreed = 0L
+
+        fun deleteRecursive(file: File) {
+            if (file.isDirectory) {
+                file.listFiles()?.forEach { child -> deleteRecursive(child) }
+                file.delete()
+            } else if (file.isFile) {
+                val size = file.length()
+                if (file.delete()) {
+                    filesDeleted++
+                    bytesFreed += size
+                }
+            }
+        }
+
+        try {
+            val app = getApplication<Application>()
+            app.cacheDir?.listFiles()?.forEach { child -> deleteRecursive(child) }
+            app.externalCacheDir?.listFiles()?.forEach { child -> deleteRecursive(child) }
+            AppLogger.i(AppLogger.LogDomain.STORAGE, "Cache cleared: $filesDeleted files, $bytesFreed bytes freed.")
+        } catch (e: Exception) {
+            AppLogger.e(AppLogger.LogDomain.STORAGE, "Error during cache deletion: ${e.localizedMessage}", e)
+        }
+
+        return CacheClearResult(filesDeleted, bytesFreed)
     }
 
     // -------------------------------------------------------------

@@ -1,6 +1,7 @@
 package com.example.snapdata.ui
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -10,11 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.snapdata.ui.screens.*
 import com.example.snapdata.ui.screens.auth.*
 import com.example.snapdata.ui.screens.landing.LandingScreen
+import com.example.snapdata.ui.theme.*
 
 @Composable
 fun MainScreen(viewModel: SnapDataViewModel) {
@@ -22,12 +25,21 @@ fun MainScreen(viewModel: SnapDataViewModel) {
 
     // Full-screen Pre-Auth & Landing experiences without BottomBar/NavRail
     when (uiState.currentScreen) {
+        AppScreen.SPLASH -> {
+            SnapDataSplashScreen(
+                onSplashFinished = {
+                    viewModel.navigateTo(AppScreen.LANDING)
+                }
+            )
+            return
+        }
         AppScreen.LANDING -> {
             LandingScreen(viewModel)
             return
         }
         AppScreen.AUTH_WELCOME -> {
             AuthWelcomeScreen(
+                isFirebaseConfigured = viewModel.isFirebaseConfigured,
                 onSignInClick = { viewModel.navigateTo(AppScreen.SIGN_IN) },
                 onCreateAccountClick = { viewModel.navigateTo(AppScreen.SIGN_UP) },
                 onGuestClick = { viewModel.continueAsGuest() },
@@ -37,7 +49,9 @@ fun MainScreen(viewModel: SnapDataViewModel) {
         }
         AppScreen.SIGN_IN -> {
             SignInScreen(
+                isFirebaseConfigured = viewModel.isFirebaseConfigured,
                 onSignIn = { email, pass -> viewModel.signIn(email, pass) },
+                onSkipAsGuest = { viewModel.continueAsGuest() },
                 onForgotPasswordClick = { viewModel.navigateTo(AppScreen.FORGOT_PASSWORD) },
                 onCreateAccountClick = { viewModel.navigateTo(AppScreen.SIGN_UP) },
                 onBackClick = { viewModel.navigateTo(AppScreen.AUTH_WELCOME) },
@@ -102,11 +116,14 @@ fun MainScreen(viewModel: SnapDataViewModel) {
             // Adaptive Tablet / Landscape Dual-Pane Layout with NavigationRail
             Row(modifier = Modifier.fillMaxSize()) {
                 NavigationRail(
+                    containerColor = CardWhite,
                     modifier = Modifier.testTag("tablet_navigation_rail"),
                     header = {
                         FloatingActionButton(
                             onClick = { viewModel.navigateTo(AppScreen.ACQUISITION) },
-                            elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp),
+                            containerColor = SnapDataRed,
+                            contentColor = CardWhite,
+                            elevation = FloatingActionButtonDefaults.elevation(2.dp),
                             modifier = Modifier
                                 .padding(vertical = 12.dp)
                                 .testTag("nav_rail_scan_fab")
@@ -120,6 +137,11 @@ fun MainScreen(viewModel: SnapDataViewModel) {
                         onClick = { viewModel.navigateTo(AppScreen.HOME) },
                         icon = { Icon(if (uiState.currentScreen == AppScreen.HOME) Icons.Default.Home else Icons.Outlined.Home, contentDescription = "Home") },
                         label = { Text("Home") },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = SnapDataRed,
+                            selectedTextColor = SnapDataRed,
+                            indicatorColor = SnapDataRedLight
+                        ),
                         modifier = Modifier.testTag("nav_rail_item_home")
                     )
                     NavigationRailItem(
@@ -127,6 +149,11 @@ fun MainScreen(viewModel: SnapDataViewModel) {
                         onClick = { viewModel.navigateTo(AppScreen.HISTORY) },
                         icon = { Icon(if (uiState.currentScreen == AppScreen.HISTORY) Icons.Default.Folder else Icons.Outlined.Folder, contentDescription = "Archive") },
                         label = { Text("Archive") },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = SnapDataRed,
+                            selectedTextColor = SnapDataRed,
+                            indicatorColor = SnapDataRedLight
+                        ),
                         modifier = Modifier.testTag("nav_rail_item_history")
                     )
                     NavigationRailItem(
@@ -134,6 +161,11 @@ fun MainScreen(viewModel: SnapDataViewModel) {
                         onClick = { viewModel.navigateTo(AppScreen.SETTINGS) },
                         icon = { Icon(if (uiState.currentScreen == AppScreen.SETTINGS) Icons.Default.Settings else Icons.Outlined.Settings, contentDescription = "Settings") },
                         label = { Text("Settings") },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = SnapDataRed,
+                            selectedTextColor = SnapDataRed,
+                            indicatorColor = SnapDataRedLight
+                        ),
                         modifier = Modifier.testTag("nav_rail_item_settings")
                     )
                 }
@@ -143,42 +175,70 @@ fun MainScreen(viewModel: SnapDataViewModel) {
                 }
             }
         } else {
-            // Standard / Compact Mobile Scaffold with Bottom NavigationBar
+            // Standard Mobile Scaffold with Clean Bottom NavigationBar
             Scaffold(
+                containerColor = WarmCreamBackground,
                 bottomBar = {
                     if (isTopLevelScreen) {
-                        NavigationBar(
-                            tonalElevation = 8.dp,
-                            modifier = Modifier.testTag("main_navigation_bar")
+                        Surface(
+                            color = CardWhite,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, LightBorder),
+                            shadowElevation = 8.dp
                         ) {
-                            NavigationBarItem(
-                                selected = uiState.currentScreen == AppScreen.HOME,
-                                onClick = { viewModel.navigateTo(AppScreen.HOME) },
-                                icon = { Icon(if (uiState.currentScreen == AppScreen.HOME) Icons.Default.Home else Icons.Outlined.Home, contentDescription = "Home") },
-                                label = { Text("Home") },
-                                modifier = Modifier.testTag("nav_item_home")
-                            )
-                            NavigationBarItem(
-                                selected = uiState.currentScreen == AppScreen.ACQUISITION,
-                                onClick = { viewModel.navigateTo(AppScreen.ACQUISITION) },
-                                icon = { Icon(Icons.Default.CameraAlt, contentDescription = "Scan Document") },
-                                label = { Text("Scan") },
-                                modifier = Modifier.testTag("nav_item_scan")
-                            )
-                            NavigationBarItem(
-                                selected = uiState.currentScreen == AppScreen.HISTORY,
-                                onClick = { viewModel.navigateTo(AppScreen.HISTORY) },
-                                icon = { Icon(if (uiState.currentScreen == AppScreen.HISTORY) Icons.Default.Folder else Icons.Outlined.Folder, contentDescription = "Archive") },
-                                label = { Text("Archive") },
-                                modifier = Modifier.testTag("nav_item_history")
-                            )
-                            NavigationBarItem(
-                                selected = uiState.currentScreen == AppScreen.SETTINGS,
-                                onClick = { viewModel.navigateTo(AppScreen.SETTINGS) },
-                                icon = { Icon(if (uiState.currentScreen == AppScreen.SETTINGS) Icons.Default.Settings else Icons.Outlined.Settings, contentDescription = "Settings") },
-                                label = { Text("Settings") },
-                                modifier = Modifier.testTag("nav_item_settings")
-                            )
+                            NavigationBar(
+                                containerColor = CardWhite,
+                                tonalElevation = 0.dp,
+                                modifier = Modifier.testTag("main_navigation_bar")
+                            ) {
+                                NavigationBarItem(
+                                    selected = uiState.currentScreen == AppScreen.HOME,
+                                    onClick = { viewModel.navigateTo(AppScreen.HOME) },
+                                    icon = { Icon(if (uiState.currentScreen == AppScreen.HOME) Icons.Default.Home else Icons.Outlined.Home, contentDescription = "Home") },
+                                    label = { Text("Home") },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = SnapDataRed,
+                                        selectedTextColor = SnapDataRed,
+                                        indicatorColor = SnapDataRedLight
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_home")
+                                )
+                                NavigationBarItem(
+                                    selected = uiState.currentScreen == AppScreen.ACQUISITION,
+                                    onClick = { viewModel.navigateTo(AppScreen.ACQUISITION) },
+                                    icon = { Icon(Icons.Outlined.CameraAlt, contentDescription = "Scan Document") },
+                                    label = { Text("Scan") },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = SnapDataRed,
+                                        selectedTextColor = SnapDataRed,
+                                        indicatorColor = SnapDataRedLight
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_scan")
+                                )
+                                NavigationBarItem(
+                                    selected = uiState.currentScreen == AppScreen.HISTORY,
+                                    onClick = { viewModel.navigateTo(AppScreen.HISTORY) },
+                                    icon = { Icon(if (uiState.currentScreen == AppScreen.HISTORY) Icons.Default.Folder else Icons.Outlined.Folder, contentDescription = "Archive") },
+                                    label = { Text("Archive") },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = SnapDataRed,
+                                        selectedTextColor = SnapDataRed,
+                                        indicatorColor = SnapDataRedLight
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_history")
+                                )
+                                NavigationBarItem(
+                                    selected = uiState.currentScreen == AppScreen.SETTINGS,
+                                    onClick = { viewModel.navigateTo(AppScreen.SETTINGS) },
+                                    icon = { Icon(if (uiState.currentScreen == AppScreen.SETTINGS) Icons.Default.Settings else Icons.Outlined.Settings, contentDescription = "Settings") },
+                                    label = { Text("Settings") },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = SnapDataRed,
+                                        selectedTextColor = SnapDataRed,
+                                        indicatorColor = SnapDataRedLight
+                                    ),
+                                    modifier = Modifier.testTag("nav_item_settings")
+                                )
+                            }
                         }
                     }
                 }
@@ -198,6 +258,11 @@ fun MainScreen(viewModel: SnapDataViewModel) {
 @Composable
 private fun ScreenContent(screen: AppScreen, viewModel: SnapDataViewModel) {
     when (screen) {
+        AppScreen.SPLASH -> SnapDataSplashScreen(
+            onSplashFinished = {
+                viewModel.navigateTo(AppScreen.LANDING)
+            }
+        )
         AppScreen.HOME -> HomeScreen(viewModel)
         AppScreen.ACQUISITION -> AcquisitionScreen(viewModel)
         AppScreen.PREPROCESSING -> PreprocessingScreen(viewModel)

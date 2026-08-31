@@ -1,7 +1,13 @@
 package com.example.snapdata.ui.screens
 
-import androidx.compose.foundation.Image
+import android.app.Activity
+import android.content.Context
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,35 +16,31 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.snapdata.data.DocumentEntity
 import com.example.snapdata.model.DocumentType
 import com.example.snapdata.model.OperationState
 import com.example.snapdata.sample.SampleDocumentRepository
 import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
-import com.example.snapdata.ui.theme.AccentGreen
-import com.example.snapdata.ui.theme.PrimaryBlue
-import com.example.snapdata.ui.theme.SecondaryCyan
+import com.example.snapdata.ui.components.*
+import com.example.snapdata.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,63 +49,64 @@ fun HomeScreen(viewModel: SnapDataViewModel) {
     val savedDocs by viewModel.savedDocuments.collectAsState()
     val totalCount by viewModel.totalDocumentCount.collectAsState()
     val isOperationLoading = uiState.appOperationState is OperationState.Loading
+    val context = LocalContext.current
+
+    var selectedDocForMenu by remember { mutableStateOf<DocumentEntity?>(null) }
+    var showMenuForDocId by remember { mutableStateOf<Long?>(null) }
+    var showUploadModal by remember { mutableStateOf(false) }
+
+    // Media and Camera Launchers
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        viewModel.onCameraCaptureResult(success)
+    }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.setImageUri(uri)
+        }
+    }
+
+    val pdfPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.setPdfUri(uri)
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val uri = viewModel.prepareCameraTempUri()
+            if (uri != null) {
+                takePictureLauncher.launch(uri)
+            }
+        } else {
+            Toast.makeText(context, "Camera permission needed to scan", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun startCamera() {
+        permissionLauncher.launch(android.Manifest.permission.CAMERA)
+    }
+
+    val userName = viewModel.currentUser?.displayName?.takeIf { it.isNotBlank() }
+        ?: viewModel.currentUser?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+        ?: "Robert"
 
     Scaffold(
+        containerColor = WarmCreamBackground,
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(PrimaryBlue),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DocumentScanner,
-                                contentDescription = "SnapData Logo",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "SnapData",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Offline-First AI Document Intelligence",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+            SnapDataTopHeader(
+                onNotificationClick = {
+                    Toast.makeText(context, "All AI processing systems operational", Toast.LENGTH_SHORT).show()
                 },
-                actions = {
-                    IconButton(
-                        onClick = { viewModel.navigateTo(AppScreen.SETTINGS) },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("settings_button")
-                    ) {
-                        Icon(Icons.Outlined.Settings, contentDescription = "Open Settings")
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { viewModel.navigateTo(AppScreen.ACQUISITION) },
-                icon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
-                text = { Text("Scan Document", fontWeight = FontWeight.Bold) },
-                containerColor = PrimaryBlue,
-                contentColor = Color.White,
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .testTag("fab_scan_document")
+                onSettingsClick = { viewModel.navigateTo(AppScreen.SETTINGS) }
             )
         }
     ) { padding ->
@@ -112,12 +115,12 @@ fun HomeScreen(viewModel: SnapDataViewModel) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            val isTabletOrLandscape = maxWidth >= 600.dp
+            val isTabletWide = maxWidth >= 600.dp
 
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = if (isTabletOrLandscape) 24.dp else 16.dp),
+                    .padding(horizontal = if (isTabletWide) 24.dp else 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Operation Loading Indicator
@@ -126,180 +129,83 @@ fun HomeScreen(viewModel: SnapDataViewModel) {
                         LinearProgressIndicator(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(4.dp)
+                                .height(3.dp)
                                 .testTag("home_operation_loading"),
-                            color = PrimaryBlue
+                            color = SnapDataRed,
+                            trackColor = Color(0xFFFCD5D7)
                         )
                     }
                 }
 
-                // Hero Action Banner
+                // 1. Hero Greeting Card
                 item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .testTag("hero_scanner_card"),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(Color(0xFF0F1E36), Color(0xFF1E3A8A), Color(0xFF0284C7))
-                                    )
-                                )
-                                .padding(20.dp)
-                        ) {
-                            Column {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(30.dp))
-                                            .background(Color(0x33FFFFFF))
-                                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Multimodal AI + OCR Pipeline",
-                                            color = SecondaryCyan,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(8.dp)
-                                                .clip(CircleShape)
-                                                .background(AccentGreen)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "100% Offline Ready",
-                                            color = Color.White,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Text(
-                                    text = "Extract Structured Data Instantly",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Scan paper invoices, receipts, tax forms and tables into Excel, CSV, JSON and PDF reports.",
-                                    color = Color(0xFFE2E8F0),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Button(
-                                        onClick = { viewModel.navigateTo(AppScreen.ACQUISITION) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = PrimaryBlue),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .heightIn(min = 48.dp)
-                                            .testTag("hero_capture_btn")
-                                    ) {
-                                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Camera Scan", fontWeight = FontWeight.Bold)
-                                    }
-                                    OutlinedButton(
-                                        onClick = { viewModel.navigateTo(AppScreen.HISTORY) },
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White),
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .heightIn(min = 48.dp)
-                                            .testTag("hero_history_btn")
-                                    ) {
-                                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Archive", fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    SnapDataHeroCard(
+                        userName = userName,
+                        onExploreClick = { viewModel.navigateTo(AppScreen.ACQUISITION) }
+                    )
                 }
 
-                // Quick Stats Bar (Responsive Layout)
+                // 2. Main Actions (Camera Scan & Upload Document)
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Card(
+                        SnapDataActionCard(
+                            title = "Camera Scan",
+                            subtitle = "Scan documents\nusing your camera",
+                            icon = Icons.Filled.PhotoCamera,
+                            isRedIcon = true,
+                            onClick = { viewModel.navigateTo(AppScreen.ACQUISITION) },
                             modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text("Stored Docs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("$totalCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = PrimaryBlue)
-                            }
-                        }
-                        Card(
+                            testTag = "home_action_camera_scan"
+                        )
+
+                        SnapDataActionCard(
+                            title = "Upload Document",
+                            subtitle = "PDF, Image\nor Files",
+                            icon = Icons.Outlined.UploadFile,
+                            isRedIcon = false,
+                            onClick = { showUploadModal = true },
                             modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text("Export Formats", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("4 (XLSX/CSV/JSON/PDF)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text("OCR Accuracy", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("98.4%", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = AccentGreen)
-                            }
-                        }
+                            testTag = "home_action_upload_doc"
+                        )
                     }
                 }
 
-                // Interactive Sample Documents (One-click instant testing)
+                // 3. Overview Metrics Section
                 item {
-                    Column {
+                    SnapDataOverviewSection(
+                        totalDocuments = totalCount,
+                        accuracyPercent = "98.4%",
+                        exportsCount = totalCount
+                    )
+                }
+
+                // 4. Instant Sample Documents Carousel
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Sample Test Documents",
+                                text = "Sample Documents",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 16.sp
                             )
                             Text(
-                                text = "Instant Testing",
+                                text = "Instant Test",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = PrimaryBlue,
-                                fontWeight = FontWeight.SemiBold
+                                color = SnapDataRed,
+                                fontWeight = FontWeight.Bold
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         LazyRow(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -307,16 +213,13 @@ fun HomeScreen(viewModel: SnapDataViewModel) {
                             items(SampleDocumentRepository.samples) { sample ->
                                 Card(
                                     modifier = Modifier
-                                        .width(230.dp)
-                                        .semantics {
-                                            role = Role.Button
-                                            contentDescription = "Test sample ${sample.title}"
-                                        }
+                                        .width(220.dp)
+                                        .shadow(1.dp, RoundedCornerShape(14.dp), ambientColor = Color(0x06000000))
+                                        .border(1.dp, LightBorder, RoundedCornerShape(14.dp))
                                         .clickable { viewModel.selectSampleDocument(sample) }
                                         .testTag("sample_doc_${sample.id}"),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    elevation = CardDefaults.cardElevation(2.dp),
-                                    shape = RoundedCornerShape(14.dp)
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(containerColor = CardWhite)
                                 ) {
                                     Column(modifier = Modifier.padding(14.dp)) {
                                         Row(
@@ -324,39 +227,36 @@ fun HomeScreen(viewModel: SnapDataViewModel) {
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.primaryContainer,
-                                                shape = RoundedCornerShape(6.dp)
-                                            ) {
-                                                Text(
-                                                    text = sample.type.displayName,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                                )
-                                            }
+                                            SnapDataDocumentTypeBadge(docType = sample.type)
                                             Icon(
-                                                imageVector = Icons.Default.PlayCircleFilled,
+                                                imageVector = Icons.Default.PlayCircleOutline,
                                                 contentDescription = "Test Sample",
-                                                tint = PrimaryBlue,
-                                                modifier = Modifier.size(22.dp)
+                                                tint = SnapDataRed,
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
 
                                         Spacer(modifier = Modifier.height(10.dp))
+
                                         Text(
                                             text = sample.title,
                                             style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SnapDataBlack,
+                                            fontSize = 14.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        Spacer(modifier = Modifier.height(3.dp))
+
                                         Text(
                                             text = sample.description,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = TextSecondary,
+                                            fontSize = 11.sp,
                                             maxLines = 2,
+                                            lineHeight = 15.sp,
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
@@ -366,151 +266,193 @@ fun HomeScreen(viewModel: SnapDataViewModel) {
                     }
                 }
 
-                // Recent Documents Section
+                // 5. Recent Documents Section Header
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Recent Processed Documents",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            text = "Recent Documents",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = SnapDataBlack,
+                            fontSize = 18.sp
                         )
+
                         TextButton(
                             onClick = { viewModel.navigateTo(AppScreen.HISTORY) },
-                            modifier = Modifier.heightIn(min = 48.dp)
+                            modifier = Modifier.testTag("home_view_all_btn")
                         ) {
-                            Text("View All", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = "View all",
+                                color = SnapDataRed,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
 
+                // 6. Recent Documents List or Clean Empty State
                 if (savedDocs.isEmpty()) {
                     item {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .shadow(2.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x08000000))
+                                .border(1.dp, LightBorder, RoundedCornerShape(16.dp))
                                 .testTag("home_empty_state_card"),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = CardWhite)
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.DocumentScanner,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(52.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Text(
-                                    text = "No documents scanned yet",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Tap 'Scan Document' or select a sample document above to start extracting data.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            SnapDataEmptyState(
+                                title = "No Documents Yet",
+                                subtitle = "Scan or upload your first document\nto get started.",
+                                actionLabel = "Scan First Document",
+                                onAction = { viewModel.navigateTo(AppScreen.ACQUISITION) }
+                            )
                         }
                     }
                 } else {
-                    items(savedDocs.take(5)) { doc ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .semantics {
-                                    role = Role.Button
-                                    contentDescription = "Open document ${doc.title}"
-                                }
-                                .clickable { viewModel.reopenDocument(doc) }
-                                .testTag("recent_doc_${doc.id}"),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            elevation = CardDefaults.cardElevation(1.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
+                    items(savedDocs.take(6)) { doc ->
+                        val dateFormatted = formatDocumentDate(doc.createdAt)
+                        Box {
+                            SnapDataDocumentCard(
+                                title = doc.title,
+                                dateFormatted = dateFormatted,
+                                docType = doc.getTypedDocType(),
+                                onClick = { viewModel.reopenDocument(doc) },
+                                onMenuClick = { showMenuForDocId = doc.id },
+                                testTag = "recent_doc_${doc.id}"
+                            )
+
+                            // Dropdown More Menu for Document Actions
+                            DropdownMenu(
+                                expanded = showMenuForDocId == doc.id,
+                                onDismissRequest = { showMenuForDocId = null },
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .background(CardWhite)
+                                    .border(1.dp, LightBorder, RoundedCornerShape(8.dp))
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(MaterialTheme.colorScheme.primaryContainer),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = when (doc.getTypedDocType()) {
-                                            DocumentType.INVOICE -> Icons.AutoMirrored.Filled.ReceiptLong
-                                            DocumentType.RECEIPT -> Icons.Default.PointOfSale
-                                            DocumentType.BANK_STATEMENT -> Icons.Default.AccountBalance
-                                            DocumentType.MARK_SHEET, DocumentType.CERTIFICATE -> Icons.Default.School
-                                            else -> Icons.Default.Description
-                                        },
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(14.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = doc.title,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(
-                                            text = doc.docType,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text(
-                                            text = "${doc.getFieldsList().size} fields",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                DropdownMenuItem(
+                                    text = { Text("Open & Review", fontWeight = FontWeight.Medium) },
+                                    leadingIcon = { Icon(Icons.Outlined.Visibility, contentDescription = null, tint = SnapDataBlack) },
+                                    onClick = {
+                                        showMenuForDocId = null
+                                        viewModel.reopenDocument(doc)
                                     }
-                                }
-
-                                Surface(
-                                    color = AccentGreen.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = "${(doc.overallConfidence * 100).toInt()}%",
-                                        color = AccentGreen,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Export Document", fontWeight = FontWeight.Medium) },
+                                    leadingIcon = { Icon(Icons.Outlined.FileDownload, contentDescription = null, tint = SnapDataBlack) },
+                                    onClick = {
+                                        showMenuForDocId = null
+                                        viewModel.reopenDocument(doc)
+                                        viewModel.navigateTo(AppScreen.EXPORT)
+                                    }
+                                )
+                                Divider(color = LightBorder)
+                                DropdownMenuItem(
+                                    text = { Text("Delete", color = SnapDataRed, fontWeight = FontWeight.Bold) },
+                                    leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = SnapDataRed) },
+                                    onClick = {
+                                        showMenuForDocId = null
+                                        viewModel.deleteDocument(doc)
+                                        Toast.makeText(context, "Document deleted", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
                             }
                         }
                     }
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(80.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
+    }
+
+    // Modal Sheet / Dialog for Upload Document
+    if (showUploadModal) {
+        AlertDialog(
+            onDismissRequest = { showUploadModal = false },
+            containerColor = CardWhite,
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text(
+                    text = "Upload Document",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = SnapDataBlack
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Choose a source file to extract structured fields and tables:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    SnapDataSecondaryButton(
+                        text = "Photo from Gallery",
+                        icon = Icons.Outlined.PhotoLibrary,
+                        onClick = {
+                            showUploadModal = false
+                            imagePickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        testTag = "upload_gallery_btn"
+                    )
+
+                    SnapDataSecondaryButton(
+                        text = "PDF / Document File",
+                        icon = Icons.Outlined.PictureAsPdf,
+                        onClick = {
+                            showUploadModal = false
+                            pdfPickerLauncher.launch("application/pdf")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        testTag = "upload_pdf_btn"
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showUploadModal = false }) {
+                    Text("Cancel", color = TextSecondary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+}
+
+/**
+ * Format timestamp nicely into "Today, 10:30 AM", "Yesterday, 04:20 PM", or "21 May 2024, 09:15 AM"
+ */
+private fun formatDocumentDate(timestamp: Long): String {
+    val now = Calendar.getInstance()
+    val docCal = Calendar.getInstance().apply { timeInMillis = timestamp }
+
+    val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    val fullDateFormatter = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
+
+    val isSameDay = now.get(Calendar.YEAR) == docCal.get(Calendar.YEAR) &&
+            now.get(Calendar.DAY_OF_YEAR) == docCal.get(Calendar.DAY_OF_YEAR)
+
+    val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+    val isYesterday = yesterday.get(Calendar.YEAR) == docCal.get(Calendar.YEAR) &&
+            yesterday.get(Calendar.DAY_OF_YEAR) == docCal.get(Calendar.DAY_OF_YEAR)
+
+    return when {
+        isSameDay -> "Today, ${timeFormatter.format(Date(timestamp))}"
+        isYesterday -> "Yesterday, ${timeFormatter.format(Date(timestamp))}"
+        else -> fullDateFormatter.format(Date(timestamp))
     }
 }

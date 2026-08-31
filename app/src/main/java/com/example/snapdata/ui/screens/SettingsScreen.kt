@@ -2,6 +2,8 @@ package com.example.snapdata.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -24,8 +27,16 @@ import androidx.compose.ui.unit.sp
 import com.example.snapdata.processing.GeminiAiService
 import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
-import com.example.snapdata.ui.theme.AccentGreen
-import com.example.snapdata.ui.theme.PrimaryBlue
+import com.example.snapdata.ui.components.SnapDataPrimaryButton
+import com.example.snapdata.ui.components.SnapDataSecondaryButton
+import com.example.snapdata.ui.illustrations.OnDevicePrivacyIllustration
+import com.example.snapdata.ui.theme.*
+
+import com.example.snapdata.ui.components.branding.SnapDataLogo
+import com.example.snapdata.ui.components.branding.SnapDataLogoVariant
+import com.example.snapdata.ui.components.branding.SnapDataSymbol
+import com.example.snapdata.ui.components.branding.SnapDataTagline
+import com.example.snapdata.ui.components.branding.SnapDataWordmark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,22 +47,18 @@ fun SettingsScreen(viewModel: SnapDataViewModel) {
 
     val hasGeminiKey = remember { GeminiAiService.isGeminiConfigured() }
     val hasBackendUrl = remember { GeminiAiService.getBackendUrl().isNotBlank() }
-    var languageMenuExpanded by remember { mutableStateOf(false) }
 
-    val languages = listOf(
-        "English (en)",
-        "Spanish (es)",
-        "French (fr)",
-        "German (de)",
-        "Japanese (ja)",
-        "Chinese Simplified (zh-CN)",
-        "Multilingual Auto-Detect"
-    )
+    var offlineOcrOnly by remember { mutableStateOf(uiState.processingOptions.useOfflineOcr) }
+    var autoContrast by remember { mutableStateOf(uiState.processingOptions.autoContrast) }
+    var deskew by remember { mutableStateOf(uiState.processingOptions.deskew) }
+    var piiRedaction by remember { mutableStateOf(uiState.processingOptions.enablePiiRedaction) }
+    var showClearDataDialog by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = WarmCreamBackground,
         topBar = {
             TopAppBar(
-                title = { Text("Settings & Diagnostics", fontWeight = FontWeight.Bold) },
+                title = { Text("Settings & Brand", fontWeight = FontWeight.Bold, color = SnapDataBlack, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(
                         onClick = { viewModel.navigateTo(AppScreen.HOME) },
@@ -59,547 +66,397 @@ fun SettingsScreen(viewModel: SnapDataViewModel) {
                             .size(48.dp)
                             .testTag("nav_back_from_settings")
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = SnapDataBlack)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = WarmCreamBackground)
             )
         }
     ) { padding ->
-        BoxWithConstraints(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val isTabletWide = maxWidth >= 650.dp
-
-            if (isTabletWide) {
-                // Wide Tablet Layout
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Left column: Engine & Privacy Posture
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        item {
-                            AccountProfileCard(
-                                viewModel = viewModel
-                            )
-                        }
-                        item {
-                            SecurityEngineCard(
-                                hasBackendUrl = hasBackendUrl,
-                                hasGeminiKey = hasGeminiKey,
-                                uiState = uiState,
-                                viewModel = viewModel
-                            )
-                        }
-                        item { DataSafeguardsCard() }
-                    }
-
-                    // Right column: OCR Configuration & Storage Stats
-                    LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        item {
-                            OcrConfigCard(
-                                selectedLanguage = uiState.selectedOcrLanguage,
-                                languages = languages,
-                                expanded = languageMenuExpanded,
-                                onExpandedChange = { languageMenuExpanded = it },
-                                onSelectLanguage = {
-                                    viewModel.setOcrLanguage(it)
-                                    languageMenuExpanded = false
-                                }
-                            )
-                        }
-                        item {
-                            StorageStatsCard(
-                                totalCount = totalCount,
-                                onClearCache = {
-                                    Toast.makeText(context, "Export and temporary cache cleared", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        }
-                        item { AboutAppCard() }
-                    }
-                }
-            } else {
-                // Standard Compact Layout
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item {
-                        AccountProfileCard(
-                            viewModel = viewModel
-                        )
-                    }
-
-                    item {
-                        SecurityEngineCard(
-                            hasBackendUrl = hasBackendUrl,
-                            hasGeminiKey = hasGeminiKey,
-                            uiState = uiState,
-                            viewModel = viewModel
-                        )
-                    }
-
-                    item { DataSafeguardsCard() }
-
-                    item {
-                        OcrConfigCard(
-                            selectedLanguage = uiState.selectedOcrLanguage,
-                            languages = languages,
-                            expanded = languageMenuExpanded,
-                            onExpandedChange = { languageMenuExpanded = it },
-                            onSelectLanguage = {
-                                viewModel.setOcrLanguage(it)
-                                languageMenuExpanded = false
-                            }
-                        )
-                    }
-
-                    item {
-                        StorageStatsCard(
-                            totalCount = totalCount,
-                            onClearCache = {
-                                Toast.makeText(context, "Export and temporary cache cleared", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }
-
-                    item { AboutAppCard() }
-
-                    item { Spacer(modifier = Modifier.height(40.dp)) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SecurityEngineCard(
-    hasBackendUrl: Boolean,
-    hasGeminiKey: Boolean,
-    uiState: com.example.snapdata.ui.UiState,
-    viewModel: SnapDataViewModel
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Security & Processing Engine",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (hasBackendUrl) "Enterprise Backend Proxy"
-                            else if (hasGeminiKey) "Gemini 3.5 Flash Multimodal"
-                            else "On-Device ML Kit OCR (Default)",
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (hasBackendUrl) "Connected via secure server proxy"
-                            else if (hasGeminiKey) "Cloud API key configured via Secrets panel"
-                            else "100% On-device local heuristic rule parser",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Surface(
-                        color = AccentGreen.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(AccentGreen)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("SECURE", color = AccentGreen, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                        }
-                    }
-                }
-
-                HorizontalDivider()
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Force Offline-Only Mode", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Guarantees 100% on-device execution with zero network transmission",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = uiState.processingOptions.forceOfflineAi,
-                        onCheckedChange = { isChecked ->
-                            viewModel.updateProcessingOptions(
-                                uiState.processingOptions.copy(
-                                    forceOfflineAi = isChecked,
-                                    enableCloudAi = if (isChecked) false else uiState.processingOptions.enableCloudAi
-                                )
-                            )
-                        },
-                        modifier = Modifier.testTag("toggle_force_offline")
-                    )
-                }
-
-                HorizontalDivider()
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Enable Cloud AI Enhancement", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Requires explicit opt-in. Uses Gemini Cloud API for complex reasoning",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = uiState.processingOptions.enableCloudAi && !uiState.processingOptions.forceOfflineAi,
-                        onCheckedChange = { isChecked ->
-                            viewModel.updateProcessingOptions(
-                                uiState.processingOptions.copy(
-                                    enableCloudAi = isChecked,
-                                    forceOfflineAi = !isChecked
-                                )
-                            )
-                        },
-                        modifier = Modifier.testTag("toggle_cloud_ai_settings")
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DataSafeguardsCard() {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Data Safeguards & Privacy",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Security, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Data Protection Rules", fontWeight = FontWeight.SemiBold)
-                }
-                Text(
-                    text = "• Documents are stored exclusively in app-private SQLite database storage.\n• Cloud backup and device-to-device transfer policies exclude sensitive files.\n• Automatic local OCR fallback engages if network fails, times out, or keys are missing.\n• No analytics, telemetry, or user tracking SDKs are embedded.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun OcrConfigCard(
-    selectedLanguage: String,
-    languages: List<String>,
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    onSelectLanguage: (String) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "OCR Configuration",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = onExpandedChange
-                ) {
-                    OutlinedTextField(
-                        value = selectedLanguage,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Primary OCR Character Model") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                            .testTag("ocr_language_dropdown")
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { onExpandedChange(false) }
-                    ) {
-                        languages.forEach { lang ->
-                            DropdownMenuItem(
-                                text = { Text(lang) },
-                                onClick = { onSelectLanguage(lang) },
-                                modifier = Modifier.heightIn(min = 48.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StorageStatsCard(
-    totalCount: Int,
-    onClearCache: () -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Local Storage & SQLite Database",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Database Records", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("$totalCount documents indexed", fontWeight = FontWeight.Bold)
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Engine Cache", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Clean (Temporary files auto-recycled)", fontWeight = FontWeight.Medium)
-                }
-
-                OutlinedButton(
-                    onClick = onClearCache,
+            // 1. App Info / Official Brand Header Card
+            item {
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("clear_cache_btn")
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
                 ) {
-                    Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Clear Temporary Cache")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AboutAppCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("About SnapData Mobile", fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "SnapData is an intelligent document processing system engineered for secure, on-device OCR, semantic layout analysis, and instant tabular data extraction into Excel, CSV, JSON, and PDF.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Architecture: Jetpack Compose M3 + Room SQLite + Privacy-First AI Engine", fontSize = 11.sp, color = PrimaryBlue)
-        }
-    }
-}
-
-@Composable
-private fun AccountProfileCard(
-    viewModel: SnapDataViewModel
-) {
-    val authState by viewModel.authState.collectAsState()
-    var showSignOutDialog by remember { mutableStateOf(false) }
-
-    val user = (authState as? com.example.snapdata.auth.domain.AuthState.Authenticated)?.user
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "User Profile & Account",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("account_profile_card"),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
+                    Column(
                         modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(if (user?.isGuest == true) Color(0xFF64748B) else PrimaryBlue),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(
-                            imageVector = if (user?.isGuest == true) Icons.Default.PersonOutline else Icons.Default.Person,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SnapDataSymbol(
+                                size = 48.dp,
+                                variant = SnapDataLogoVariant.WHITE_ON_DARK
+                            )
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(14.dp))
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (user?.isGuest == true) "Guest Session" else user?.displayName ?: "SnapData User",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (user?.isGuest == true) "Local Offline Mode" else user?.email ?: "Offline Identity",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                            Column(modifier = Modifier.weight(1f)) {
+                                SnapDataWordmark(
+                                    fontSize = 20.sp,
+                                    snapColor = SnapDataBlack,
+                                    dataColor = SnapDataRed
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                SnapDataTagline(
+                                    fontSize = 9.5.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
 
-                    if (user?.isGuest != true && user?.isEmailVerified == true) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(AccentGreen.copy(alpha = 0.15f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        HorizontalDivider(color = SubtleBorder)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Verified",
-                                color = AccentGreen,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
+                                text = "Build Architecture",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                text = "Kotlin • Jetpack Compose • Room • ML Kit",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = SnapDataBlack,
+                                fontSize = 12.sp
                             )
                         }
                     }
                 }
+            }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                if (user?.isGuest == true) {
-                    OutlinedButton(
-                        onClick = { viewModel.navigateTo(AppScreen.AUTH_WELCOME) },
+            // Official Brand Identity & Variants Showcase
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("account_register_btn")
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Default.AccountCircle, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sign In or Register Account")
-                    }
-                } else {
-                    OutlinedButton(
-                        onClick = { showSignOutDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("account_sign_out_btn"),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sign Out of SnapData")
+                        Text(
+                            text = "Brand Identity System",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = SnapDataBlack,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = "Official design specifications: Document outline, folded corner, data circuit grid, and vivid red camera shutter aperture.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            fontSize = 11.5.sp
+                        )
+
+                        // Variant Preview Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 1. Primary White on Dark
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF0F1014))
+                                        .padding(6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    SnapDataSymbol(size = 44.dp, variant = SnapDataLogoVariant.WHITE_ON_DARK)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Primary", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+                            }
+
+                            // 2. Red on Dark
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF0F1014))
+                                        .padding(6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    SnapDataSymbol(size = 44.dp, variant = SnapDataLogoVariant.RED_ON_DARK)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Red Accent", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+                            }
+
+                            // 3. Monochrome
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF0F1014))
+                                        .padding(6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    SnapDataSymbol(size = 44.dp, variant = SnapDataLogoVariant.MONOCHROME)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Monochrome", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+                            }
+
+                            // 4. Small Icon
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF0F1014))
+                                        .padding(6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    SnapDataSymbol(size = 36.dp, variant = SnapDataLogoVariant.SMALL_ICON)
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("Small Icon", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+                            }
+                        }
                     }
                 }
             }
+
+            // 2. OCR & AI Processing Engine
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Processing Configuration",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = SnapDataBlack,
+                            fontSize = 15.sp
+                        )
+
+                        OnDevicePrivacyIllustration(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            height = 80.dp
+                        )
+
+                        SettingsToggleRow(
+                            title = "Strict On-Device OCR Mode",
+                            subtitle = "Guarantees 100% private offline processing without cloud transmission",
+                            checked = offlineOcrOnly,
+                            onCheckedChange = {
+                                offlineOcrOnly = it
+                                viewModel.updateProcessingOptions(uiState.processingOptions.copy(forceOfflineAi = it))
+                            }
+                        )
+
+                        Divider(color = SubtleBorder)
+
+                        SettingsToggleRow(
+                            title = "Automatic Contrast & Shadow Removal",
+                            subtitle = "Enhance faint ink, thermal receipts and skewed captures",
+                            checked = autoContrast,
+                            onCheckedChange = {
+                                autoContrast = it
+                                viewModel.updateProcessingOptions(uiState.processingOptions.copy(enhanceContrast = it))
+                            }
+                        )
+
+                        Divider(color = SubtleBorder)
+
+                        SettingsToggleRow(
+                            title = "Perspective Deskewing",
+                            subtitle = "Correct quadrilateral orientation during scanning",
+                            checked = deskew,
+                            onCheckedChange = {
+                                deskew = it
+                                viewModel.updateProcessingOptions(uiState.processingOptions.copy(deskew = it))
+                            }
+                        )
+
+                        Divider(color = SubtleBorder)
+
+                        SettingsToggleRow(
+                            title = "PII Data Redaction Engine",
+                            subtitle = "Automatically masks social security, phone and card numbers",
+                            checked = piiRedaction,
+                            onCheckedChange = {
+                                piiRedaction = it
+                                viewModel.updateProcessingOptions(uiState.processingOptions.copy(enablePiiRedaction = it))
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 3. Storage & Diagnostics
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = "Storage & Database",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = SnapDataBlack,
+                            fontSize = 15.sp
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Stored Documents", style = MaterialTheme.typography.bodyMedium, color = TextDark)
+                            Text("$totalCount documents", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = SnapDataBlack)
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Local Storage Engine", style = MaterialTheme.typography.bodyMedium, color = TextDark)
+                            Text("Room SQLite v2.7", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        SnapDataSecondaryButton(
+                            text = "Clear All Documents",
+                            icon = Icons.Default.DeleteForever,
+                            onClick = { showClearDataDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            testTag = "clear_all_docs_btn"
+                        )
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
 
-    if (showSignOutDialog) {
+    if (showClearDataDialog) {
         AlertDialog(
-            onDismissRequest = { showSignOutDialog = false },
-            title = { Text("Sign Out of SnapData?", fontWeight = FontWeight.Bold) },
-            text = {
-                Text(
-                    "You will return to the welcome screen. All locally stored documents, OCR records, and exported files will remain completely intact on your device."
-                )
-            },
+            onDismissRequest = { showClearDataDialog = false },
+            containerColor = CardWhite,
+            shape = RoundedCornerShape(20.dp),
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = SnapDataRed) },
+            title = { Text("Clear All Documents?", fontWeight = FontWeight.Bold, color = SnapDataBlack) },
+            text = { Text("This will permanently remove all $totalCount scanned and processed documents from your local archive. This action cannot be undone.") },
             confirmButton = {
                 Button(
                     onClick = {
-                        showSignOutDialog = false
-                        viewModel.signOut()
+                        viewModel.clearSavedDocuments()
+                        showClearDataDialog = false
+                        Toast.makeText(context, "Archive cleared", Toast.LENGTH_SHORT).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.testTag("dialog_confirm_sign_out")
+                    colors = ButtonDefaults.buttonColors(containerColor = SnapDataRed),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Sign Out", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Clear All", color = CardWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showSignOutDialog = false },
-                    modifier = Modifier.testTag("dialog_cancel_sign_out")
-                ) {
-                    Text("Cancel")
+                TextButton(onClick = { showClearDataDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
                 }
             }
         )
     }
 }
 
+@Composable
+private fun SettingsToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = SnapDataBlack,
+                fontSize = 13.sp
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                fontSize = 11.sp
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = CardWhite,
+                checkedTrackColor = SnapDataRed,
+                uncheckedThumbColor = TextSecondary,
+                uncheckedTrackColor = SubtleBorder
+            )
+        )
+    }
+}

@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -25,8 +27,11 @@ import androidx.compose.ui.unit.sp
 import com.example.snapdata.model.ExportFormat
 import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
-import com.example.snapdata.ui.theme.AccentGreen
-import com.example.snapdata.ui.theme.PrimaryBlue
+import com.example.snapdata.ui.components.SnapDataDocumentTypeBadge
+import com.example.snapdata.ui.components.SnapDataPrimaryButton
+import com.example.snapdata.ui.components.SnapDataSecondaryButton
+import com.example.snapdata.ui.illustrations.ExportTransformIllustration
+import com.example.snapdata.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,9 +40,10 @@ fun ExportScreen(viewModel: SnapDataViewModel) {
     val context = LocalContext.current
 
     Scaffold(
+        containerColor = WarmCreamBackground,
         topBar = {
             TopAppBar(
-                title = { Text("Export & Share Hub", fontWeight = FontWeight.Bold) },
+                title = { Text("Export Document", fontWeight = FontWeight.Bold, color = SnapDataBlack, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(
                         onClick = { viewModel.navigateTo(AppScreen.REVIEW_EDITOR) },
@@ -45,382 +51,319 @@ fun ExportScreen(viewModel: SnapDataViewModel) {
                             .size(48.dp)
                             .testTag("nav_back_from_export")
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = SnapDataBlack)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = WarmCreamBackground)
             )
         },
         bottomBar = {
-            Surface(tonalElevation = 6.dp, shadowElevation = 8.dp) {
+            Surface(
+                color = CardWhite,
+                border = androidx.compose.foundation.BorderStroke(1.dp, LightBorder),
+                shadowElevation = 8.dp
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 20.dp, vertical = 14.dp)
+                        .navigationBarsPadding(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Button(
-                        onClick = { viewModel.performExport() },
-                        enabled = !uiState.isExporting,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(52.dp)
-                            .testTag("generate_export_btn"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                    ) {
-                        if (uiState.isExporting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp).testTag("export_progress_indicator"),
-                                strokeWidth = 2.dp,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Exporting...", fontWeight = FontWeight.Bold, color = Color.White)
-                        } else {
-                            Icon(Icons.Default.FileDownload, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Export ${uiState.selectedExportFormat.name}", fontWeight = FontWeight.Bold, color = Color.White)
-                        }
+                    if (uiState.lastExportResult != null && !uiState.isExporting) {
+                        SnapDataSecondaryButton(
+                            text = "Share File",
+                            icon = Icons.Outlined.Share,
+                            onClick = { viewModel.shareExportFile() },
+                            modifier = Modifier.weight(1f),
+                            testTag = "share_export_btn"
+                        )
                     }
 
-                    if (uiState.lastExportResult != null && !uiState.isExporting) {
-                        FilledTonalButton(
-                            onClick = { viewModel.shareExportFile() },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(52.dp)
-                                .testTag("share_export_btn"),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Share, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Share File", fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    SnapDataPrimaryButton(
+                        text = if (uiState.isExporting) "Exporting..." else "Export ${uiState.selectedExportFormat.name}",
+                        icon = Icons.Outlined.FileDownload,
+                        enabled = !uiState.isExporting,
+                        onClick = { viewModel.performExport() },
+                        modifier = Modifier.weight(1f),
+                        testTag = "generate_export_btn"
+                    )
                 }
             }
         }
     ) { padding ->
-        BoxWithConstraints(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val isTabletWide = maxWidth >= 650.dp
-
-            if (isTabletWide) {
-                // Wide Tablet Split Layout
-                Row(
+            // Target Document Details Card
+            item {
+                Card(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        .fillMaxWidth()
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
                 ) {
-                    // Left Column: Document info and export status
                     Column(
                         modifier = Modifier
-                            .weight(0.9f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        TargetDocCard(uiState = uiState)
-
-                        if (uiState.exportError != null) {
-                            ExportErrorCard(
-                                errorMsg = uiState.exportError ?: "Unknown error",
-                                onDismiss = { viewModel.clearExportError() },
-                                onRetry = { viewModel.performExport() }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = uiState.activeTitle.ifBlank { "Untitled Document" },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f)
                             )
+                            SnapDataDocumentTypeBadge(docType = uiState.activeDocType)
                         }
 
-                        if (uiState.lastExportResult != null && !uiState.isExporting) {
-                            ExportSuccessCard(result = uiState.lastExportResult!!, context = context)
+                        Divider(color = SubtleBorder)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("Extracted Fields", style = MaterialTheme.typography.bodySmall, color = TextSecondary, fontSize = 11.sp)
+                                Text("${uiState.activeFields.size} Key-Values", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = SnapDataBlack)
+                            }
+                            Column {
+                                Text("Tables", style = MaterialTheme.typography.bodySmall, color = TextSecondary, fontSize = 11.sp)
+                                Text("${uiState.activeTables.size} Matrix Grids", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = SnapDataBlack)
+                            }
+                            Column {
+                                Text("Confidence", style = MaterialTheme.typography.bodySmall, color = TextSecondary, fontSize = 11.sp)
+                                Text("${(uiState.activeConfidence * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = AccentGreen)
+                            }
                         }
                     }
+                }
+            }
 
-                    // Right Column: Format selection list
+            // Minimalist Hand-Drawn Transformation Illustration
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
                     Column(
                         modifier = Modifier
-                            .weight(1.1f)
-                            .fillMaxHeight()
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = "Select Export Format",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                        ExportTransformIllustration(
+                            modifier = Modifier.fillMaxWidth(),
+                            height = 90.dp
                         )
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(ExportFormat.values().size) { index ->
-                                val format = ExportFormat.values()[index]
-                                ExportFormatCard(
-                                    format = format,
-                                    isSelected = uiState.selectedExportFormat == format,
-                                    isExporting = uiState.isExporting,
-                                    onSelect = {
-                                        viewModel.setSelectedExportFormat(format)
-                                        viewModel.performExport(format)
-                                    }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Universal Schema Conversion (JSON • CSV • XLSX • PDF)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
+
+            // Export Errors
+            if (uiState.exportError != null) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color(0xFFF5C2C4), RoundedCornerShape(12.dp)),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = SnapDataRedLight)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = SnapDataRed)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(uiState.exportError ?: "Export failed", color = TextDark, modifier = Modifier.weight(1f), fontSize = 12.sp)
+                            IconButton(onClick = { viewModel.clearExportError() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = SnapDataRed, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Export Success Card
+            if (uiState.lastExportResult != null && !uiState.isExporting) {
+                item {
+                    val result = uiState.lastExportResult!!
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, Color(0xFFA7EAC7), RoundedCornerShape(14.dp)),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8FAF1))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(AccentGreen),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = CardWhite, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Ready: ${result.file.name}",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF0F5132),
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = "${Formatter.formatFileSize(context, result.sizeBytes)} • Saved to device storage",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
                                 )
                             }
                         }
                     }
                 }
-            } else {
-                // Standard Compact Layout
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item { TargetDocCard(uiState = uiState) }
+            }
 
-                    if (uiState.exportError != null) {
-                        item {
-                            ExportErrorCard(
-                                errorMsg = uiState.exportError ?: "Unknown error",
-                                onDismiss = { viewModel.clearExportError() },
-                                onRetry = { viewModel.performExport() }
+            // Format Selection Section
+            item {
+                Text(
+                    text = "Select Export Format",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = SnapDataBlack,
+                    fontSize = 16.sp
+                )
+            }
+
+            items(ExportFormat.entries.size) { index ->
+                val format = ExportFormat.entries[index]
+                val isSelected = uiState.selectedExportFormat == format
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(if (isSelected) 2.dp else 1.dp, RoundedCornerShape(14.dp), ambientColor = Color(0x06000000))
+                        .border(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) SnapDataRed else LightBorder,
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        .clickable { viewModel.setSelectedExportFormat(format) }
+                        .testTag("export_format_${format.name.lowercase()}"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Format icon box
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) SnapDataRedLight else Color(0xFFF6F4ED)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = when (format) {
+                                    ExportFormat.JSON -> Icons.Outlined.Code
+                                    ExportFormat.CSV -> Icons.Outlined.TableView
+                                    ExportFormat.EXCEL -> Icons.Outlined.GridOn
+                                    ExportFormat.PDF -> Icons.Outlined.PictureAsPdf
+                                },
+                                contentDescription = null,
+                                tint = if (isSelected) SnapDataRed else TextSecondary,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                    }
 
-                    item {
-                        Text(
-                            text = "Select Export Format",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        Spacer(modifier = Modifier.width(14.dp))
 
-                    items(ExportFormat.values().size) { index ->
-                        val format = ExportFormat.values()[index]
-                        ExportFormatCard(
-                            format = format,
-                            isSelected = uiState.selectedExportFormat == format,
-                            isExporting = uiState.isExporting,
-                            onSelect = {
-                                viewModel.setSelectedExportFormat(format)
-                                viewModel.performExport(format)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = format.displayName,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) SnapDataBlack else TextDark,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = if (isSelected) SnapDataRedLight else Color(0xFFF1EFE8),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = format.extension.uppercase(),
+                                        color = if (isSelected) SnapDataRed else TextSecondary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
-                        )
-                    }
+                            Text(
+                                text = when (format) {
+                                    ExportFormat.EXCEL -> "Spreadsheet workbook with formatted sheets and tables"
+                                    ExportFormat.CSV -> "RFC 4180 standard comma-separated tabular values"
+                                    ExportFormat.JSON -> "Nested structured document schema with confidence values"
+                                    ExportFormat.PDF -> "Multi-page printable report with rendered tables"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
 
-                    if (uiState.lastExportResult != null && !uiState.isExporting) {
-                        item {
-                            ExportSuccessCard(result = uiState.lastExportResult!!, context = context)
+                        // Radio checkmark indicator
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) SnapDataRed else Color.Transparent)
+                                .border(1.5.dp, if (isSelected) SnapDataRed else LightBorder, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = CardWhite, modifier = Modifier.size(14.dp))
+                            }
                         }
                     }
-
-                    item { Spacer(modifier = Modifier.height(60.dp)) }
                 }
             }
-        }
-    }
-}
 
-@Composable
-private fun TargetDocCard(uiState: com.example.snapdata.ui.UiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Target Document",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = uiState.activeTitle.ifBlank { "Untitled Document" },
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${uiState.activeDocType.displayName} • ${uiState.activeFields.size} fields • ${uiState.activeTables.size} table(s)",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExportErrorCard(
-    errorMsg: String,
-    onDismiss: () -> Unit,
-    onRetry: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("export_error_card"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.ErrorOutline,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Export Error",
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = errorMsg,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.heightIn(min = 48.dp).testTag("export_dismiss_error_btn")
-                ) {
-                    Text("Dismiss", color = MaterialTheme.colorScheme.error)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = onRetry,
-                    modifier = Modifier.heightIn(min = 48.dp).testTag("export_retry_btn"),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Retry", color = Color.White)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExportFormatCard(
-    format: ExportFormat,
-    isSelected: Boolean,
-    isExporting: Boolean,
-    onSelect: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(enabled = !isExporting) { onSelect() }
-            .then(
-                if (isSelected) Modifier.border(2.dp, PrimaryBlue, RoundedCornerShape(14.dp))
-                else Modifier
-            )
-            .testTag("export_format_${format.extension}"),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-            else MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(14.dp),
-        elevation = CardDefaults.cardElevation(1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        when (format) {
-                            ExportFormat.EXCEL -> Color(0xFF107C41)
-                            ExportFormat.CSV -> Color(0xFF0078D4)
-                            ExportFormat.JSON -> Color(0xFF8B5CF6)
-                            ExportFormat.PDF -> Color(0xFFE11D48)
-                        }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = when (format) {
-                        ExportFormat.EXCEL -> Icons.Default.TableChart
-                        ExportFormat.CSV -> Icons.Default.GridOn
-                        ExportFormat.JSON -> Icons.Default.Code
-                        ExportFormat.PDF -> Icons.Default.PictureAsPdf
-                    },
-                    contentDescription = null,
-                    tint = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = format.displayName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = when (format) {
-                        ExportFormat.EXCEL -> "Multi-sheet workbook with Overview, Key-Values, and Tabular Matrices."
-                        ExportFormat.CSV -> "Universal spreadsheet CSV with UTF-8 BOM ready for Excel, Google Sheets, or Pandas."
-                        ExportFormat.JSON -> "Full structured schema with metadata, confidence scores & field tags."
-                        ExportFormat.PDF -> "Digitized A4 publication report generated locally with clean typography."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            RadioButton(
-                selected = isSelected,
-                enabled = !isExporting,
-                onClick = onSelect
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExportSuccessCard(
-    result: com.example.snapdata.export.ExportManager.ExportResult,
-    context: android.content.Context
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("export_success_card"),
-        colors = CardDefaults.cardColors(containerColor = AccentGreen.copy(alpha = 0.12f)),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = AccentGreen)
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Ready to Share (${result.format.displayName})",
-                    fontWeight = FontWeight.Bold,
-                    color = AccentGreen
-                )
-                Text(
-                    text = "${result.file.name} • ${Formatter.formatFileSize(context, result.sizeBytes)}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
 }

@@ -11,6 +11,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NoAccounts
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +39,8 @@ fun SignInScreen(
     onForgotPasswordClick: () -> Unit,
     onCreateAccountClick: () -> Unit,
     onBackClick: () -> Unit,
+    isFirebaseConfigured: Boolean = false,
+    onSkipAsGuest: () -> Unit = {},
     isLoading: Boolean = false,
     authError: AppAuthError? = null,
     onClearError: () -> Unit = {},
@@ -93,6 +99,70 @@ fun SignInScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
         ) {
+            // Firebase Unconfigured Banner with Instant Skip to Home
+            if (!isFirebaseConfigured) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp)
+                        .testTag("firebase_unconfigured_banner"),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color(0xFFBFDBFE))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFF1D4ED8),
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Local / Offline Mode (Firebase Not Configured)",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1E3A8A)
+                            )
+                        }
+                        Text(
+                            text = "Cloud authentication is optional. You can skip sign-in and immediately access all on-device OCR and document extraction features as a guest.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF1E40AF),
+                            lineHeight = 18.sp
+                        )
+                        Button(
+                            onClick = onSkipAsGuest,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .testTag("skip_signin_to_home_btn"),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF1D4ED8),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NoAccounts,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Skip Sign-In & Continue to Home (Guest)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+            }
+
             // General Auth Error Banner
             AnimatedVisibility(
                 visible = authError != null,
@@ -195,7 +265,27 @@ fun SignInScreen(
                 testTag = "signin_submit_btn"
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Quick Guest Mode Bypass Button
+            OutlinedButton(
+                onClick = onSkipAsGuest,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("signin_guest_bypass_btn"),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color.LightGray)
+            ) {
+                Text(
+                    text = "Continue to Home as Guest",
+                    color = SnapDataBlack,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Sign Up Bottom Link
             Row(

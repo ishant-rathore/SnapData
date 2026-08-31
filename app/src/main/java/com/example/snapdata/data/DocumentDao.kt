@@ -37,6 +37,9 @@ interface DocumentDao {
     @Query("DELETE FROM documents WHERE id = :id")
     suspend fun deleteDocumentById(id: Long)
 
+    @Query("DELETE FROM documents")
+    suspend fun deleteAllDocuments()
+
     @Query("SELECT COUNT(*) FROM documents")
     fun getDocumentCount(): Flow<Int>
 }

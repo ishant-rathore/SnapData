@@ -1,6 +1,6 @@
 {
   "name": "SnapData",
-  "description": "AI-Powered Intelligent Document Processing & Structured Data Extraction System",
+  "description": "AI-Powered Document Intelligence - Scan, extract, and structure invoices, receipts, forms, and financial documents with on-device OCR and AI.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

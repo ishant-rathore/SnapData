@@ -13,7 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
  * - Test/offline fallback: [ProductionAuthProvider] (local session, guest mode always works).
  */
 class AuthRepository(
-    private val provider: AuthenticationProvider
+    private val provider: AuthenticationProvider,
+    val isFirebaseConfigured: Boolean = provider is FirebaseAuthProvider
 ) {
     val authState: StateFlow<AuthState> = provider.authState
     val currentUser: AuthUser? get() = provider.currentUser
@@ -56,21 +57,42 @@ class AuthRepository(
 
     companion object {
         /**
+         * Checks if Firebase is configured with active initialized apps.
+         * Safe against missing google-services.json and uninitialized FirebaseApp.
+         */
+        fun isFirebaseAvailable(context: android.content.Context? = null): Boolean {
+            return try {
+                if (context != null) {
+                    val apps = com.google.firebase.FirebaseApp.getApps(context)
+                    apps.isNotEmpty()
+                } else {
+                    val apps = com.google.firebase.FirebaseApp.getApps(com.google.firebase.FirebaseApp.getInstance().applicationContext)
+                    apps.isNotEmpty()
+                }
+            } catch (t: Throwable) {
+                false
+            }
+        }
+
+        /**
          * Creates an AuthRepository with the appropriate provider.
          *
          * If Firebase is available (google-services.json present + Firebase initialized),
          * uses [FirebaseAuthProvider] for real production authentication.
          *
-         * Falls back to [ProductionAuthProvider] for local/test environments.
+         * Falls back to [ProductionAuthProvider] for local/offline environments.
          */
-        fun create(sessionStorage: SecureSessionStorage): AuthRepository {
+        fun create(sessionStorage: SecureSessionStorage, context: android.content.Context? = null): AuthRepository {
             return try {
-                // Verify Firebase is initialized by accessing FirebaseAuth
-                com.google.firebase.auth.FirebaseAuth.getInstance()
-                AuthRepository(FirebaseAuthProvider(sessionStorage))
-            } catch (e: Exception) {
-                // Firebase not configured (no google-services.json) → use local provider
-                AuthRepository(ProductionAuthProvider(sessionStorage))
+                val isAvailable = isFirebaseAvailable(context)
+                if (isAvailable) {
+                    AuthRepository(FirebaseAuthProvider(sessionStorage), isFirebaseConfigured = true)
+                } else {
+                    AuthRepository(ProductionAuthProvider(sessionStorage), isFirebaseConfigured = false)
+                }
+            } catch (t: Throwable) {
+                // Firebase not configured (no google-services.json or FirebaseApp not initialized) → use local provider
+                AuthRepository(ProductionAuthProvider(sessionStorage), isFirebaseConfigured = false)
             }
         }
     }

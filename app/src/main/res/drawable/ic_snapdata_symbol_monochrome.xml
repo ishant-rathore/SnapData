@@ -1,0 +1,91 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Document Background Mask -->
+    <path
+        android:fillColor="#0D0E12"
+        android:pathData="M 52,22 L 132,22 L 163,53 L 163,162 C 163,172 155,180 145,180 L 55,180 C 45,180 37,172 37,162 L 37,38 C 37,28 45,22 52,22 Z" />
+
+    <!-- Circuit Network Grid (Crisp White Lines) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M 50,46 L 115,46 M 50,65 L 142,65 M 50,84 L 125,84 M 50,102 L 75,102 M 125,102 L 148,102 M 62,36 L 62,102 M 84,46 L 84,106 M 106,36 L 106,96 M 128,52 L 128,106" />
+
+    <!-- Circuit Nodes (All White dots) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M 62,46 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 106,46 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 84,65 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 128,65 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 62,84 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 106,84 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 84,46 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 62,65 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 106,65 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 84,84 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 128,84 m -4.5,0 a 4.5,4.5 0 1,0 9,0 a 4.5,4.5 0 1,0 -9,0" />
+
+    <!-- Camera Shutter Base -->
+    <path
+        android:fillColor="#0D0E12"
+        android:pathData="M 100,132 m -36,0 a 36,36 0 1,0 72,0 a 36,36 0 1,0 -72,0" />
+
+    <!-- Aperture Blades (White Blades with Dark Seams) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 100,99 A 33,33 0 0,1 128,115 L 108,124 L 97,117 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 128,115 A 33,33 0 0,1 128,148 L 107,138 L 108,124 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 128,148 A 33,33 0 0,1 100,165 L 98,145 L 107,138 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 100,165 A 33,33 0 0,1 72,148 L 92,140 L 98,145 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 72,148 A 33,33 0 0,1 72,115 L 93,126 L 92,140 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 72,115 A 33,33 0 0,1 100,99 L 102,119 L 93,126 Z" />
+
+    <!-- Blade Seam Lines (Dark Separator Cuts) -->
+    <path
+        android:strokeColor="#0D0E12"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M 100,99 L 108,124 M 128,115 L 107,138 M 128,148 L 98,145 M 100,165 L 92,140 M 72,148 L 93,126 M 72,115 L 102,119" />
+
+    <!-- Aperture Center Polygon (Dark Core) -->
+    <path
+        android:fillColor="#0D0E12"
+        android:pathData="M 102,119 L 108,124 L 107,138 L 98,145 L 92,140 L 93,126 Z" />
+
+    <!-- Aperture Outer Ring (Thick White Stroke) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:pathData="M 100,132 m -35,0 a 35,35 0 1,0 70,0 a 35,35 0 1,0 -70,0" />
+
+    <!-- Document Main Border Outline (Crisp White Stroke) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 52,22 L 132,22 L 163,53 L 163,162 C 163,172 155,180 145,180 L 55,180 C 45,180 37,172 37,162 L 37,38 C 37,28 45,22 52,22 Z" />
+
+    <!-- Fold Crease Line -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 132,22 L 132,53 L 163,53" />
+
+</vector>

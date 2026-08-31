@@ -32,11 +32,11 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            val localKeystore = file("${rootDir}/debug.keystore")
-            if (localKeystore.exists()) {
-                storeFile = localKeystore
-            }
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
         }
         create("release") {
             val storeFilePath = (project.findProperty("RELEASE_STORE_FILE") as String?)
@@ -77,7 +77,7 @@ android {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
             isDebuggable = true
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
     }
 

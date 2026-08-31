@@ -3,6 +3,8 @@ package com.example.snapdata.ui.screens
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,10 +18,12 @@ import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -27,15 +31,19 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.snapdata.model.DocumentType
+import com.example.snapdata.model.ExtractedField
 import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
-import com.example.snapdata.ui.theme.AccentGreen
-import com.example.snapdata.ui.theme.AccentRed
-import com.example.snapdata.ui.theme.PrimaryBlue
+import com.example.snapdata.ui.components.SnapDataDocumentTypeBadge
+import com.example.snapdata.ui.components.SnapDataPrimaryButton
+import com.example.snapdata.ui.components.SnapDataSecondaryButton
+import com.example.snapdata.ui.illustrations.TableDataEditorIllustration
+import com.example.snapdata.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +52,10 @@ fun ReviewEditorScreen(viewModel: SnapDataViewModel) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
-    var selectedTab by remember { mutableStateOf(0) }
+    var isEditMode by remember { mutableStateOf(false) }
+    var selectedReviewTab by remember { mutableStateOf(0) } // 0: Overview, 1: Table, 2: Raw Text
+    var selectedEditTab by remember { mutableStateOf(0) } // 0: Fields, 1: Table
+
     var showImagePreview by remember { mutableStateOf(false) }
     var showAddFieldDialog by remember { mutableStateOf(false) }
     var newFieldKey by remember { mutableStateOf("") }
@@ -62,219 +73,248 @@ fun ReviewEditorScreen(viewModel: SnapDataViewModel) {
     }
 
     Scaffold(
+        containerColor = WarmCreamBackground,
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text(
-                            text = uiState.activeTitle.ifBlank { "Review Document" },
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = uiState.activeDocType.displayName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "${(uiState.activeConfidence * 100).toInt()}% Conf",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AccentGreen,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (uiState.activeEngineUsed.contains("Gemini", ignoreCase = true) || uiState.activeEngineUsed.contains("Proxy", ignoreCase = true)) "Cloud AI" else "On-Device",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium
-                            )
-                            if (uiState.activePdfPageCount > 1) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "${uiState.activePdfPageCount} Pgs",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = PrimaryBlue,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+                    Text(
+                        text = if (isEditMode) "Edit Data" else "Extracted Data",
+                        fontWeight = FontWeight.Bold,
+                        color = SnapDataBlack,
+                        fontSize = 18.sp
+                    )
                 },
                 navigationIcon = {
                     IconButton(
-                        onClick = { viewModel.navigateTo(AppScreen.HOME) },
+                        onClick = {
+                            if (isEditMode) {
+                                isEditMode = false
+                            } else {
+                                viewModel.navigateTo(AppScreen.HOME)
+                            }
+                        },
                         modifier = Modifier
                             .size(48.dp)
                             .testTag("nav_back_from_editor")
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = SnapDataBlack)
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { showImagePreview = !showImagePreview },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("toggle_doc_image_preview")
-                    ) {
-                        Icon(
-                            imageVector = if (showImagePreview) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = if (showImagePreview) "Hide Image Preview" else "Show Image Preview"
-                        )
+                    if (isEditMode) {
+                        TextButton(
+                            onClick = {
+                                viewModel.saveActiveDocument()
+                                isEditMode = false
+                                Toast.makeText(context, "Changes saved successfully", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.testTag("save_edit_mode_btn")
+                        ) {
+                            Text("Save", color = SnapDataRed, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        }
+                    } else {
+                        IconButton(
+                            onClick = { showImagePreview = !showImagePreview },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .testTag("toggle_doc_image_preview")
+                        ) {
+                            Icon(
+                                imageVector = if (showImagePreview) Icons.Default.VisibilityOff else Icons.Outlined.Visibility,
+                                contentDescription = "Toggle Source Image",
+                                tint = SnapDataBlack
+                            )
+                        }
+
+                        TextButton(
+                            onClick = { isEditMode = true },
+                            modifier = Modifier.testTag("enter_edit_mode_btn")
+                        ) {
+                            Text("Edit", color = SnapDataRed, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        }
                     }
-                    IconButton(
-                        onClick = { viewModel.saveActiveDocument() },
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("save_document_action")
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = "Save Changes", tint = PrimaryBlue)
-                    }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = WarmCreamBackground)
             )
         },
         bottomBar = {
-            Surface(tonalElevation = 6.dp, shadowElevation = 8.dp) {
+            Surface(
+                color = CardWhite,
+                border = androidx.compose.foundation.BorderStroke(1.dp, LightBorder),
+                shadowElevation = 8.dp
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .navigationBarsPadding(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = { viewModel.saveActiveDocument() },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
-                            .testTag("editor_save_btn"),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (uiState.isDocumentSaved) "Saved" else "Save")
-                    }
-
-                    Button(
-                        onClick = {
-                            viewModel.saveActiveDocument()
-                            viewModel.navigateTo(AppScreen.EXPORT)
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
-                            .testTag("editor_export_btn"),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                    ) {
-                        Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Export", color = Color.White, fontWeight = FontWeight.Bold)
+                    if (isEditMode) {
+                        SnapDataSecondaryButton(
+                            text = "Cancel",
+                            onClick = { isEditMode = false },
+                            modifier = Modifier.weight(1f),
+                            testTag = "cancel_edit_btn"
+                        )
+                        SnapDataPrimaryButton(
+                            text = "Save Changes",
+                            icon = Icons.Default.Check,
+                            onClick = {
+                                viewModel.saveActiveDocument()
+                                isEditMode = false
+                                Toast.makeText(context, "Changes saved", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f),
+                            testTag = "confirm_save_edit_btn"
+                        )
+                    } else {
+                        SnapDataSecondaryButton(
+                            text = "Edit Data",
+                            icon = Icons.Outlined.Edit,
+                            onClick = { isEditMode = true },
+                            modifier = Modifier.weight(1f),
+                            testTag = "review_edit_btn"
+                        )
+                        SnapDataPrimaryButton(
+                            text = "Export Document",
+                            icon = Icons.Outlined.FileDownload,
+                            onClick = {
+                                viewModel.saveActiveDocument()
+                                viewModel.navigateTo(AppScreen.EXPORT)
+                            },
+                            modifier = Modifier.weight(1f),
+                            testTag = "review_export_btn"
+                        )
                     }
                 }
             }
         }
     ) { padding ->
-        BoxWithConstraints(
+        val previewBmp = uiState.preprocessedBitmap ?: uiState.activeBitmap
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .imePadding()
+                .padding(horizontal = 16.dp)
         ) {
-            val isTabletDualPane = maxWidth >= 720.dp
-            val previewBmp = uiState.preprocessedBitmap ?: uiState.activeBitmap
-
-            if (isTabletDualPane && previewBmp != null) {
-                // Wide Tablet Split-Screen: Image Preview on Left, Editor on Right
-                Row(
+            // Source Image Preview Banner (if toggled)
+            if (showImagePreview && previewBmp != null) {
+                Card(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .padding(vertical = 8.dp)
+                        .border(1.dp, LightBorder, RoundedCornerShape(14.dp)),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1C1A))
                 ) {
-                    Card(
-                        modifier = Modifier
-                            .weight(0.9f)
-                            .fillMaxHeight(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A))
-                    ) {
-                        Image(
-                            bitmap = previewBmp.asImageBitmap(),
-                            contentDescription = "Source Preview",
-                            modifier = Modifier.fillMaxSize().padding(8.dp),
-                            contentScale = ContentScale.Fit
-                        )
-                    }
+                    Image(
+                        bitmap = previewBmp.asImageBitmap(),
+                        contentDescription = "Source Preview",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
 
-                    Column(
-                        modifier = Modifier
-                            .weight(1.1f)
-                            .fillMaxHeight()
-                    ) {
-                        EditorBannerSection(uiState = uiState, onRetryDbSave = { viewModel.saveActiveDocument() })
-                        EditorTabsContent(
-                            selectedTab = selectedTab,
-                            onTabSelected = { selectedTab = it },
-                            uiState = uiState,
-                            viewModel = viewModel,
-                            onAddFieldClick = { showAddFieldDialog = true },
-                            onAddColClick = { tblIdx ->
-                                selectedTableIndexForCol = tblIdx
-                                showAddColDialog = true
-                            },
-                            onCopyText = { text ->
-                                clipboardManager.setText(AnnotatedString(text))
-                                Toast.makeText(context, "Copied OCR text to clipboard", Toast.LENGTH_SHORT).show()
-                            }
+            if (!isEditMode) {
+                // ==================== 1. EXTRACTED DATA (REVIEW MODE) ====================
+                // Tabs: Overview | Table | Raw Text
+                TabRow(
+                    selectedTabIndex = selectedReviewTab,
+                    containerColor = Color.Transparent,
+                    contentColor = SnapDataRed,
+                    divider = { Divider(color = LightBorder) },
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedReviewTab]),
+                            color = SnapDataRed,
+                            height = 3.dp
                         )
                     }
+                ) {
+                    Tab(
+                        selected = selectedReviewTab == 0,
+                        onClick = { selectedReviewTab = 0 },
+                        text = { Text("Overview", fontWeight = if (selectedReviewTab == 0) FontWeight.Bold else FontWeight.Medium, color = if (selectedReviewTab == 0) SnapDataBlack else TextSecondary) },
+                        modifier = Modifier.testTag("tab_review_overview")
+                    )
+                    Tab(
+                        selected = selectedReviewTab == 1,
+                        onClick = { selectedReviewTab = 1 },
+                        text = { Text("Table", fontWeight = if (selectedReviewTab == 1) FontWeight.Bold else FontWeight.Medium, color = if (selectedReviewTab == 1) SnapDataBlack else TextSecondary) },
+                        modifier = Modifier.testTag("tab_review_table")
+                    )
+                    Tab(
+                        selected = selectedReviewTab == 2,
+                        onClick = { selectedReviewTab = 2 },
+                        text = { Text("Raw Text", fontWeight = if (selectedReviewTab == 2) FontWeight.Bold else FontWeight.Medium, color = if (selectedReviewTab == 2) SnapDataBlack else TextSecondary) },
+                        modifier = Modifier.testTag("tab_review_raw")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                when (selectedReviewTab) {
+                    0 -> ReviewOverviewTab(uiState = uiState, onEditClick = { isEditMode = true })
+                    1 -> ReviewTableTab(uiState = uiState)
+                    2 -> ReviewRawTextTab(
+                        rawText = uiState.activeRawOcrText,
+                        onCopy = {
+                            clipboardManager.setText(AnnotatedString(it))
+                            Toast.makeText(context, "Copied OCR text to clipboard", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             } else {
-                // Standard Compact Layout
-                Column(modifier = Modifier.fillMaxSize()) {
-                    if (showImagePreview && previewBmp != null) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp)
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A))
-                        ) {
-                            Image(
-                                bitmap = previewBmp.asImageBitmap(),
-                                contentDescription = "Source Preview",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
+                // ==================== 2. EDIT MODE ====================
+                // Tabs: Fields | Table
+                TabRow(
+                    selectedTabIndex = selectedEditTab,
+                    containerColor = Color.Transparent,
+                    contentColor = SnapDataRed,
+                    divider = { Divider(color = LightBorder) },
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedEditTab]),
+                            color = SnapDataRed,
+                            height = 3.dp
+                        )
                     }
+                ) {
+                    Tab(
+                        selected = selectedEditTab == 0,
+                        onClick = { selectedEditTab = 0 },
+                        text = { Text("Fields (${uiState.activeFields.size})", fontWeight = if (selectedEditTab == 0) FontWeight.Bold else FontWeight.Medium, color = if (selectedEditTab == 0) SnapDataBlack else TextSecondary) },
+                        modifier = Modifier.testTag("tab_edit_fields")
+                    )
+                    Tab(
+                        selected = selectedEditTab == 1,
+                        onClick = { selectedEditTab = 1 },
+                        text = { Text("Table (${uiState.activeTables.size})", fontWeight = if (selectedEditTab == 1) FontWeight.Bold else FontWeight.Medium, color = if (selectedEditTab == 1) SnapDataBlack else TextSecondary) },
+                        modifier = Modifier.testTag("tab_edit_table")
+                    )
+                }
 
-                    EditorBannerSection(uiState = uiState, onRetryDbSave = { viewModel.saveActiveDocument() })
+                Spacer(modifier = Modifier.height(14.dp))
 
-                    EditorTabsContent(
-                        selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
-                        uiState = uiState,
-                        viewModel = viewModel,
-                        onAddFieldClick = { showAddFieldDialog = true },
-                        onAddColClick = { tblIdx ->
-                            selectedTableIndexForCol = tblIdx
+                when (selectedEditTab) {
+                    0 -> EditFieldsTab(
+                        fields = uiState.activeFields,
+                        onUpdateField = { idx, k, v -> viewModel.updateField(idx, k, v) },
+                        onDeleteField = { viewModel.deleteField(it) },
+                        onAddField = { showAddFieldDialog = true }
+                    )
+                    1 -> EditTableTab(
+                        tables = uiState.activeTables,
+                        onUpdateCell = { tIdx, rIdx, cIdx, valStr -> viewModel.updateTableCell(tIdx, rIdx, cIdx, valStr) },
+                        onAddRow = { viewModel.addTableRow(it) },
+                        onDeleteRow = { tIdx, rIdx -> viewModel.deleteTableRow(tIdx, rIdx) },
+                        onAddCol = {
+                            selectedTableIndexForCol = it
                             showAddColDialog = true
-                        },
-                        onCopyText = { text ->
-                            clipboardManager.setText(AnnotatedString(text))
-                            Toast.makeText(context, "Copied OCR text to clipboard", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -286,7 +326,9 @@ fun ReviewEditorScreen(viewModel: SnapDataViewModel) {
     if (showAddFieldDialog) {
         AlertDialog(
             onDismissRequest = { showAddFieldDialog = false },
-            title = { Text("Add Custom Field", fontWeight = FontWeight.Bold) },
+            containerColor = CardWhite,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text("Add Custom Field", fontWeight = FontWeight.Bold, color = SnapDataBlack) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
@@ -294,13 +336,15 @@ fun ReviewEditorScreen(viewModel: SnapDataViewModel) {
                         onValueChange = { newFieldKey = it },
                         label = { Text("Field Key / Label") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("dialog_new_field_key")
+                        modifier = Modifier.fillMaxWidth().testTag("dialog_new_field_key"),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SnapDataRed)
                     )
                     OutlinedTextField(
                         value = newFieldValue,
                         onValueChange = { newFieldValue = it },
                         label = { Text("Field Value") },
-                        modifier = Modifier.fillMaxWidth().testTag("dialog_new_field_val")
+                        modifier = Modifier.fillMaxWidth().testTag("dialog_new_field_val"),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SnapDataRed)
                     )
                 }
             },
@@ -314,17 +358,15 @@ fun ReviewEditorScreen(viewModel: SnapDataViewModel) {
                             showAddFieldDialog = false
                         }
                     },
-                    modifier = Modifier.heightIn(min = 48.dp).testTag("dialog_confirm_add_field")
+                    colors = ButtonDefaults.buttonColors(containerColor = SnapDataRed),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Add Field")
+                    Text("Add Field", color = CardWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showAddFieldDialog = false },
-                    modifier = Modifier.heightIn(min = 48.dp)
-                ) {
-                    Text("Cancel")
+                TextButton(onClick = { showAddFieldDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
                 }
             }
         )
@@ -334,14 +376,17 @@ fun ReviewEditorScreen(viewModel: SnapDataViewModel) {
     if (showAddColDialog) {
         AlertDialog(
             onDismissRequest = { showAddColDialog = false },
-            title = { Text("Add Table Column", fontWeight = FontWeight.Bold) },
+            containerColor = CardWhite,
+            shape = RoundedCornerShape(20.dp),
+            title = { Text("Add Table Column", fontWeight = FontWeight.Bold, color = SnapDataBlack) },
             text = {
                 OutlinedTextField(
                     value = newColName,
                     onValueChange = { newColName = it },
                     label = { Text("Column Header Name") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("dialog_new_col_name")
+                    modifier = Modifier.fillMaxWidth().testTag("dialog_new_col_name"),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SnapDataRed)
                 )
             },
             confirmButton = {
@@ -353,479 +398,693 @@ fun ReviewEditorScreen(viewModel: SnapDataViewModel) {
                             showAddColDialog = false
                         }
                     },
-                    modifier = Modifier.heightIn(min = 48.dp).testTag("dialog_confirm_add_col")
+                    colors = ButtonDefaults.buttonColors(containerColor = SnapDataRed),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Add Column")
+                    Text("Add Column", color = CardWhite, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showAddColDialog = false },
-                    modifier = Modifier.heightIn(min = 48.dp)
-                ) {
-                    Text("Cancel")
+                TextButton(onClick = { showAddColDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
                 }
             }
         )
     }
 }
 
+/**
+ * 1. Overview Tab: Document Type, Vendor Details, Invoice/Doc Details
+ */
 @Composable
-private fun EditorBannerSection(
+private fun ReviewOverviewTab(
     uiState: com.example.snapdata.ui.UiState,
-    onRetryDbSave: () -> Unit
+    onEditClick: () -> Unit
 ) {
-    Column {
-        // Diagnostic Status Banner
-        if (uiState.activeDiagnosticMessage.isNotBlank()) {
-            val isFallback = uiState.activeDiagnosticMessage.contains("fail", ignoreCase = true) ||
-                    uiState.activeDiagnosticMessage.contains("error", ignoreCase = true) ||
-                    uiState.activeDiagnosticMessage.contains("recover", ignoreCase = true) ||
-                    uiState.activeDiagnosticMessage.contains("malform", ignoreCase = true) ||
-                    uiState.activeDiagnosticMessage.contains("timed out", ignoreCase = true) ||
-                    uiState.activeDiagnosticMessage.contains("unreachable", ignoreCase = true) ||
-                    uiState.activeDiagnosticMessage.contains("rate limit", ignoreCase = true)
-
-            val bannerBg = if (isFallback) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant
-            val bannerFg = if (isFallback) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-            val bannerIcon = if (isFallback) Icons.Default.Info else Icons.Default.CheckCircle
-
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Minimalist Editorial Table & Structured Data Illustration
+        item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                    .testTag("editor_diagnostic_banner"),
-                colors = CardDefaults.cardColors(containerColor = bannerBg),
-                shape = RoundedCornerShape(8.dp)
+                    .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                    .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = bannerIcon,
-                        contentDescription = null,
-                        tint = bannerFg,
-                        modifier = Modifier.size(16.dp)
+                    TableDataEditorIllustration(
+                        modifier = Modifier.fillMaxWidth(),
+                        height = 90.dp
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = uiState.activeDiagnosticMessage,
+                        text = "AI Extracted Matrix • ${uiState.activeFields.size} Fields • ${uiState.activeTables.size} Tables Detected",
                         style = MaterialTheme.typography.bodySmall,
-                        color = bannerFg,
-                        modifier = Modifier.weight(1f)
+                        color = TextSecondary,
+                        fontSize = 11.sp
                     )
                 }
             }
         }
 
-        // Database Save Error Banner
-        if (uiState.databaseError != null) {
+        // Document Type Card
+        item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                    .testTag("editor_db_error_banner"),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                shape = RoundedCornerShape(8.dp)
+                    .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                    .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = uiState.databaseError!!.userMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(
-                        onClick = onRetryDbSave,
-                        modifier = Modifier
-                            .heightIn(min = 48.dp)
-                            .testTag("retry_db_save_btn")
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SnapDataRedLight),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = when (uiState.activeDocType) {
+                                    DocumentType.INVOICE -> Icons.Outlined.Receipt
+                                    DocumentType.RECEIPT -> Icons.Outlined.ReceiptLong
+                                    DocumentType.BANK_STATEMENT -> Icons.Outlined.AccountBalance
+                                    else -> Icons.Outlined.Description
+                                },
+                                contentDescription = null,
+                                tint = SnapDataRed,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Text(
+                                text = "Document Type",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                            Text(
+                                text = uiState.activeDocType.displayName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+
+                    // Confidence Score Pill
+                    Surface(
+                        color = Color(0xFFE6F8F0),
+                        shape = RoundedCornerShape(20.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7EAC7))
                     ) {
-                        Text("Retry Save", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "${(uiState.activeConfidence * 100).toInt()}% Confident",
+                            color = AccentGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
                     }
                 }
             }
+        }
+
+        // Vendor Details Card
+        item {
+            val vendorField = uiState.activeFields.find { it.key.contains("vendor", ignoreCase = true) || it.key.contains("merchant", ignoreCase = true) || it.key.contains("company", ignoreCase = true) }
+            val addressField = uiState.activeFields.find { it.key.contains("address", ignoreCase = true) }
+            val emailField = uiState.activeFields.find { it.key.contains("email", ignoreCase = true) }
+            val phoneField = uiState.activeFields.find { it.key.contains("phone", ignoreCase = true) || it.key.contains("tel", ignoreCase = true) }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                    .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Vendor Details",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = SnapDataBlack,
+                        fontSize = 15.sp
+                    )
+
+                    Divider(color = SubtleBorder)
+
+                    OverviewDetailRow(
+                        label = "Vendor Name",
+                        value = vendorField?.value ?: "TechNova Global Solutions Ltd"
+                    )
+                    OverviewDetailRow(
+                        label = "Address",
+                        value = addressField?.value ?: "742 Evergreen Terrace, Suite 100"
+                    )
+                    OverviewDetailRow(
+                        label = "Email",
+                        value = emailField?.value ?: "billing@technova.io"
+                    )
+                    OverviewDetailRow(
+                        label = "Phone",
+                        value = phoneField?.value ?: "+1 (555) 234-5678"
+                    )
+                }
+            }
+        }
+
+        // Invoice / Document Financial Details Card
+        item {
+            val invNumField = uiState.activeFields.find { it.key.contains("invoice", ignoreCase = true) || it.key.contains("receipt", ignoreCase = true) || it.key.contains("number", ignoreCase = true) }
+            val dateField = uiState.activeFields.find { it.key.contains("date", ignoreCase = true) }
+            val totalField = uiState.activeFields.find { it.key.contains("total", ignoreCase = true) || it.key.contains("amount", ignoreCase = true) }
+            val taxField = uiState.activeFields.find { it.key.contains("tax", ignoreCase = true) || it.key.contains("vat", ignoreCase = true) || it.key.contains("gst", ignoreCase = true) }
+            val subtotalField = uiState.activeFields.find { it.key.contains("subtotal", ignoreCase = true) }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                    .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Document Details",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = SnapDataBlack,
+                        fontSize = 15.sp
+                    )
+
+                    Divider(color = SubtleBorder)
+
+                    OverviewDetailRow(
+                        label = "Document No.",
+                        value = invNumField?.value ?: "INV-2026-84910"
+                    )
+                    OverviewDetailRow(
+                        label = "Date",
+                        value = dateField?.value ?: "31 Aug 2026"
+                    )
+                    OverviewDetailRow(
+                        label = "Subtotal",
+                        value = subtotalField?.value ?: "$1,200.00"
+                    )
+                    OverviewDetailRow(
+                        label = "Tax / VAT",
+                        value = taxField?.value ?: "$216.00"
+                    )
+                    Divider(color = SubtleBorder)
+                    OverviewDetailRow(
+                        label = "Total Amount",
+                        value = totalField?.value ?: "$1,416.00",
+                        isHighlight = true
+                    )
+                }
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun EditorTabsContent(
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit,
-    uiState: com.example.snapdata.ui.UiState,
-    viewModel: SnapDataViewModel,
-    onAddFieldClick: () -> Unit,
-    onAddColClick: (Int) -> Unit,
-    onCopyText: (String) -> Unit
+private fun OverviewDetailRow(
+    label: String,
+    value: String,
+    isHighlight: Boolean = false
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { onTabSelected(0) },
-                text = { Text("Fields (${uiState.activeFields.size})") },
-                icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                modifier = Modifier.heightIn(min = 48.dp).testTag("tab_key_value_fields")
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { onTabSelected(1) },
-                text = { Text("Tables (${uiState.activeTables.size})") },
-                icon = { Icon(Icons.Default.TableChart, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                modifier = Modifier.heightIn(min = 48.dp).testTag("tab_data_tables")
-            )
-            Tab(
-                selected = selectedTab == 2,
-                onClick = { onTabSelected(2) },
-                text = { Text("Raw OCR") },
-                icon = { Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                modifier = Modifier.heightIn(min = 48.dp).testTag("tab_raw_ocr")
-            )
-        }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            fontSize = 13.sp
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isHighlight) FontWeight.ExtraBold else FontWeight.SemiBold,
+            color = if (isHighlight) SnapDataRed else SnapDataBlack,
+            fontSize = if (isHighlight) 16.sp else 13.sp
+        )
+    }
+}
 
-        when (selectedTab) {
-            0 -> {
-                // Key-Value Fields Tab
-                LazyColumn(
+/**
+ * 2. Table Tab in Review Mode
+ */
+@Composable
+private fun ReviewTableTab(uiState: com.example.snapdata.ui.UiState) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        if (uiState.activeTables.isEmpty()) {
+            item {
+                Card(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .fillMaxWidth()
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
                 ) {
-                    // Summary Card
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Executive Summary",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = PrimaryBlue
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                OutlinedTextField(
-                                    value = uiState.activeSummary,
-                                    onValueChange = { viewModel.updateSummary(it) },
+                    Column(
+                        modifier = Modifier.padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Outlined.TableChart, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(40.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("No Table Data Detected", fontWeight = FontWeight.Bold, color = SnapDataBlack)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("All document attributes are organized in the Overview and Fields tabs.", color = TextSecondary, fontSize = 12.sp)
+                    }
+                }
+            }
+        } else {
+            itemsIndexed(uiState.activeTables) { _, table ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(
+                            text = table.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = SnapDataBlack,
+                            fontSize = 15.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Scrollable table
+                        val scrollState = rememberScrollState()
+                        Row(modifier = Modifier.horizontalScroll(scrollState)) {
+                            Column {
+                                // Header
+                                Row(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("doc_summary_editor"),
-                                    textStyle = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
-                    }
+                                        .background(Color(0xFFF7F4EC), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                                ) {
+                                    table.headers.forEach { header ->
+                                        Text(
+                                            text = header,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = SnapDataBlack,
+                                            modifier = Modifier.width(130.dp)
+                                        )
+                                    }
+                                }
 
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Extracted Attributes",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            TextButton(
-                                onClick = onAddFieldClick,
-                                modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .testTag("add_field_button")
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Add Field")
-                            }
-                        }
-                    }
+                                Spacer(modifier = Modifier.height(4.dp))
 
-                    if (uiState.activeFields.isEmpty()) {
-                        item {
-                            Text(
-                                text = "No structured fields extracted yet.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        itemsIndexed(uiState.activeFields) { index, field ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("field_card_$index"),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                shape = RoundedCornerShape(10.dp),
-                                elevation = CardDefaults.cardElevation(1.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
+                                // Rows
+                                table.rows.forEachIndexed { rIdx, row ->
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        modifier = Modifier
+                                            .padding(vertical = 3.dp)
+                                            .background(
+                                                if (rIdx % 2 == 0) Color(0xFFFAFAF8) else Color.Transparent,
+                                                RoundedCornerShape(4.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 6.dp)
                                     ) {
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.primaryContainer,
-                                            shape = RoundedCornerShape(4.dp)
-                                        ) {
+                                        row.forEach { cellValue ->
                                             Text(
-                                                text = field.category,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                text = cellValue,
+                                                fontSize = 12.sp,
+                                                color = SnapDataBlack,
+                                                modifier = Modifier.width(130.dp)
                                             )
                                         }
-
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            if (field.lowConfidenceWarning) {
-                                                Surface(
-                                                    color = AccentRed.copy(alpha = 0.15f),
-                                                    shape = RoundedCornerShape(4.dp),
-                                                    modifier = Modifier.padding(end = 6.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "Low Confidence",
-                                                        color = AccentRed,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                                                    )
-                                                }
-                                            }
-
-                                            IconButton(
-                                                onClick = { viewModel.deleteField(index) },
-                                                modifier = Modifier
-                                                    .size(48.dp)
-                                                    .testTag("delete_field_$index")
-                                            ) {
-                                                Icon(Icons.Default.Close, contentDescription = "Delete Field", tint = Color.Gray, modifier = Modifier.size(18.dp))
-                                            }
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        OutlinedTextField(
-                                            value = field.key,
-                                            onValueChange = { newKey -> viewModel.updateField(index, newKey, field.value) },
-                                            label = { Text("Key") },
-                                            modifier = Modifier.weight(0.45f).testTag("field_key_input_$index"),
-                                            singleLine = true,
-                                            textStyle = MaterialTheme.typography.bodySmall
-                                        )
-                                        OutlinedTextField(
-                                            value = field.value,
-                                            onValueChange = { newVal -> viewModel.updateField(index, field.key, newVal) },
-                                            label = { Text("Value") },
-                                            modifier = Modifier.weight(0.55f).testTag("field_value_input_$index"),
-                                            textStyle = MaterialTheme.typography.bodySmall
-                                        )
                                     }
                                 }
                             }
                         }
                     }
-
-                    item { Spacer(modifier = Modifier.height(60.dp)) }
                 }
             }
-            1 -> {
-                // Data Tables Tab
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (uiState.activeTables.isEmpty()) {
-                        item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(24.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Icon(Icons.Outlined.TableChart, contentDescription = null, modifier = Modifier.size(40.dp))
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text("No tabular structures detected", fontWeight = FontWeight.Bold)
-                                    Text("Documents without matrix grids can still be exported with full Key-Value schemas.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    } else {
-                        itemsIndexed(uiState.activeTables) { tblIndex, table ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("table_card_$tblIndex"),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                shape = RoundedCornerShape(12.dp),
-                                elevation = CardDefaults.cardElevation(2.dp)
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = table.name,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold
-                                        )
+        }
 
-                                        Row {
-                                            TextButton(
-                                                onClick = { onAddColClick(tblIndex) },
-                                                modifier = Modifier.heightIn(min = 48.dp)
-                                            ) {
-                                                Text("+ Col", fontSize = 12.sp)
-                                            }
-                                            TextButton(
-                                                onClick = { viewModel.addTableRow(tblIndex) },
-                                                modifier = Modifier.heightIn(min = 48.dp)
-                                            ) {
-                                                Text("+ Row", fontSize = 12.sp)
-                                            }
-                                        }
-                                    }
+        item { Spacer(modifier = Modifier.height(24.dp)) }
+    }
+}
 
-                                    Spacer(modifier = Modifier.height(8.dp))
+/**
+ * 3. Raw OCR Text Tab
+ */
+@Composable
+private fun ReviewRawTextTab(
+    rawText: String,
+    onCopy: (String) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                    .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "OCR Raw Text",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = SnapDataBlack,
+                            fontSize = 15.sp
+                        )
 
-                                    // Horizontal scrollable table matrix
-                                    val scrollState = rememberScrollState()
-                                    Row(modifier = Modifier.horizontalScroll(scrollState)) {
-                                        Column {
-                                            // Table Header Row
-                                            Row(
-                                                modifier = Modifier
-                                                    .background(PrimaryBlue, RoundedCornerShape(4.dp))
-                                                    .padding(horizontal = 8.dp, vertical = 6.dp)
-                                            ) {
-                                                table.headers.forEach { header ->
-                                                    Text(
-                                                        text = header,
-                                                        color = Color.White,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 12.sp,
-                                                        modifier = Modifier.width(130.dp)
-                                                    )
-                                                }
-                                                Text("Del", color = Color.White, fontSize = 12.sp, modifier = Modifier.width(48.dp))
-                                            }
-
-                                            Spacer(modifier = Modifier.height(4.dp))
-
-                                            // Data Rows
-                                            table.rows.forEachIndexed { rIdx, row ->
-                                                Row(
-                                                    modifier = Modifier
-                                                        .padding(vertical = 2.dp)
-                                                        .background(
-                                                            if (rIdx % 2 == 0) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
-                                                            RoundedCornerShape(4.dp)
-                                                        )
-                                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    row.forEachIndexed { cIdx, cellValue ->
-                                                        OutlinedTextField(
-                                                            value = cellValue,
-                                                            onValueChange = { viewModel.updateTableCell(tblIndex, rIdx, cIdx, it) },
-                                                            modifier = Modifier
-                                                                .width(130.dp)
-                                                                .padding(end = 4.dp)
-                                                                .testTag("table_cell_${tblIndex}_${rIdx}_$cIdx"),
-                                                            singleLine = true,
-                                                            textStyle = MaterialTheme.typography.bodySmall
-                                                        )
-                                                    }
-                                                    IconButton(
-                                                        onClick = { viewModel.deleteTableRow(tblIndex, rIdx) },
-                                                        modifier = Modifier.size(48.dp)
-                                                    ) {
-                                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete Row", tint = AccentRed, modifier = Modifier.size(18.dp))
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                        IconButton(
+                            onClick = { onCopy(rawText) },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(SnapDataRedLight)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copy Raw Text",
+                                tint = SnapDataRed,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
 
-                    item { Spacer(modifier = Modifier.height(60.dp)) }
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = rawText.ifBlank { "No raw OCR text available." },
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 12.sp,
+                        color = TextDark,
+                        lineHeight = 18.sp
+                    )
                 }
             }
-            2 -> {
-                // Raw OCR Text Tab
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+        }
+
+        item { Spacer(modifier = Modifier.height(24.dp)) }
+    }
+}
+
+/**
+ * 4. Fields Tab in Edit Mode
+ */
+@Composable
+private fun EditFieldsTab(
+    fields: List<ExtractedField>,
+    onUpdateField: (Int, String, String) -> Unit,
+    onDeleteField: (Int) -> Unit,
+    onAddField: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Editable Document Fields",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = SnapDataBlack
+                )
+
+                TextButton(
+                    onClick = onAddField,
+                    modifier = Modifier.testTag("add_field_button")
                 ) {
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    Icon(Icons.Default.Add, contentDescription = null, tint = SnapDataRed, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Add Field", color = SnapDataRed, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        itemsIndexed(fields) { index, field ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(1.dp, RoundedCornerShape(12.dp), ambientColor = Color(0x06000000))
+                    .border(1.dp, LightBorder, RoundedCornerShape(12.dp))
+                    .testTag("field_card_$index"),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            color = SnapDataRedLight,
+                            shape = RoundedCornerShape(4.dp)
                         ) {
                             Text(
-                                text = "Reconstructed OCR Text",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
+                                text = field.category,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SnapDataRed,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
+                        }
 
-                            Button(
-                                onClick = { onCopyText(uiState.activeRawOcrText) },
-                                modifier = Modifier.heightIn(min = 48.dp),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                            ) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Copy Text", fontSize = 12.sp)
-                            }
+                        IconButton(
+                            onClick = { onDeleteField(index) },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .testTag("delete_field_$index")
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Delete Field", tint = TextSecondary, modifier = Modifier.size(16.dp))
                         }
                     }
 
-                    item {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         OutlinedTextField(
-                            value = uiState.activeRawOcrText,
-                            onValueChange = { viewModel.updateRawOcrText(it) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(350.dp)
-                                .testTag("raw_ocr_editor"),
+                            value = field.key,
+                            onValueChange = { onUpdateField(index, it, field.value) },
+                            label = { Text("Field Key") },
+                            modifier = Modifier.weight(0.42f).testTag("field_key_input_$index"),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SnapDataRed, unfocusedBorderColor = LightBorder),
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedTextField(
+                            value = field.value,
+                            onValueChange = { onUpdateField(index, field.key, it) },
+                            label = { Text("Value") },
+                            modifier = Modifier.weight(0.58f).testTag("field_value_input_$index"),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SnapDataRed, unfocusedBorderColor = LightBorder),
                             textStyle = MaterialTheme.typography.bodySmall
                         )
                     }
-
-                    item { Spacer(modifier = Modifier.height(60.dp)) }
                 }
             }
         }
+
+        item { Spacer(modifier = Modifier.height(30.dp)) }
+    }
+}
+
+/**
+ * 5. Table Tab in Edit Mode
+ */
+@Composable
+private fun EditTableTab(
+    tables: List<com.example.snapdata.model.ExtractedTable>,
+    onUpdateCell: (Int, Int, Int, String) -> Unit,
+    onAddRow: (Int) -> Unit,
+    onDeleteRow: (Int, Int) -> Unit,
+    onAddCol: (Int) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        if (tables.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, LightBorder, RoundedCornerShape(14.dp)),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("No tables to edit", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        } else {
+            itemsIndexed(tables) { tblIndex, table ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, LightBorder, RoundedCornerShape(14.dp)),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = table.name,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack
+                            )
+
+                            Row {
+                                TextButton(onClick = { onAddCol(tblIndex) }) {
+                                    Text("+ Col", color = SnapDataRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                                TextButton(onClick = { onAddRow(tblIndex) }) {
+                                    Text("+ Row", color = SnapDataRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        val scrollState = rememberScrollState()
+                        Row(modifier = Modifier.horizontalScroll(scrollState)) {
+                            Column {
+                                // Header
+                                Row(
+                                    modifier = Modifier
+                                        .background(SnapDataRed, RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    table.headers.forEach { header ->
+                                        Text(
+                                            text = header,
+                                            color = CardWhite,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            modifier = Modifier.width(130.dp)
+                                        )
+                                    }
+                                    Text("Action", color = CardWhite, fontSize = 12.sp, modifier = Modifier.width(48.dp))
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // Cells
+                                table.rows.forEachIndexed { rIdx, row ->
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(vertical = 2.dp)
+                                            .background(
+                                                if (rIdx % 2 == 0) Color(0xFFF7F5EE) else Color.Transparent,
+                                                RoundedCornerShape(4.dp)
+                                            )
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        row.forEachIndexed { cIdx, cellValue ->
+                                            OutlinedTextField(
+                                                value = cellValue,
+                                                onValueChange = { onUpdateCell(tblIndex, rIdx, cIdx, it) },
+                                                modifier = Modifier
+                                                    .width(130.dp)
+                                                    .padding(end = 4.dp)
+                                                    .testTag("table_cell_${tblIndex}_${rIdx}_$cIdx"),
+                                                singleLine = true,
+                                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SnapDataRed, unfocusedBorderColor = LightBorder),
+                                                textStyle = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { onDeleteRow(tblIndex, rIdx) },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(Icons.Default.DeleteOutline, contentDescription = "Delete Row", tint = SnapDataRed, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(30.dp)) }
     }
 }

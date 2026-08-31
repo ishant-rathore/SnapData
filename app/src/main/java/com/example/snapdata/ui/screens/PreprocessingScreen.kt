@@ -3,6 +3,8 @@ package com.example.snapdata.ui.screens
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -34,7 +37,8 @@ import com.example.snapdata.model.DocumentType
 import com.example.snapdata.model.ProcessingOptions
 import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
-import com.example.snapdata.ui.theme.PrimaryBlue
+import com.example.snapdata.ui.components.SnapDataPrimaryButton
+import com.example.snapdata.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,9 +51,10 @@ fun PreprocessingScreen(viewModel: SnapDataViewModel) {
     val focusManager = LocalFocusManager.current
 
     Scaffold(
+        containerColor = WarmCreamBackground,
         topBar = {
             TopAppBar(
-                title = { Text("Enhance & Configure", fontWeight = FontWeight.Bold) },
+                title = { Text("Enhance & Configure", fontWeight = FontWeight.Bold, color = SnapDataBlack, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(
                         onClick = { viewModel.navigateTo(AppScreen.ACQUISITION) },
@@ -57,22 +62,27 @@ fun PreprocessingScreen(viewModel: SnapDataViewModel) {
                             .size(48.dp)
                             .testTag("nav_back_from_prep")
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate Back", tint = SnapDataBlack)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = WarmCreamBackground)
             )
         },
         bottomBar = {
             Surface(
-                tonalElevation = 6.dp,
+                color = CardWhite,
+                border = androidx.compose.foundation.BorderStroke(1.dp, LightBorder),
                 shadowElevation = 8.dp
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(horizontal = 20.dp, vertical = 14.dp)
+                        .navigationBarsPadding()
                 ) {
-                    Button(
+                    SnapDataPrimaryButton(
+                        text = "Extract Structured Data",
+                        icon = Icons.Default.AutoAwesome,
                         onClick = {
                             focusManager.clearFocus()
                             viewModel.updateTitle(currentTitle)
@@ -80,22 +90,9 @@ fun PreprocessingScreen(viewModel: SnapDataViewModel) {
                             viewModel.updateProcessingOptions(options)
                             viewModel.startProcessingPipeline()
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                            .testTag("start_processing_pipeline_btn"),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue)
-                    ) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Extract Structured Data",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                        testTag = "start_processing_pipeline_btn"
+                    )
                 }
             }
         }
@@ -109,14 +106,13 @@ fun PreprocessingScreen(viewModel: SnapDataViewModel) {
             val isTabletOrLandscape = maxWidth >= 650.dp
 
             if (isTabletOrLandscape) {
-                // Wide layout: Image preview on Left, Options on Right
+                // Wide layout
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    // Left Image & Multi-Page preview
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -134,7 +130,6 @@ fun PreprocessingScreen(viewModel: SnapDataViewModel) {
                         )
                     }
 
-                    // Right Form Inputs & Filter Options
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -166,11 +161,11 @@ fun PreprocessingScreen(viewModel: SnapDataViewModel) {
                     }
                 }
             } else {
-                // Standard Compact Layout
+                // Standard Phone Layout
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -219,8 +214,9 @@ private fun MultiPagePdfBanner(pageCount: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .border(1.dp, Color(0xFFF5C2C4), RoundedCornerShape(12.dp))
             .testTag("multi_page_pdf_banner"),
-        colors = CardDefaults.cardColors(containerColor = PrimaryBlue.copy(alpha = 0.08f)),
+        colors = CardDefaults.cardColors(containerColor = SnapDataRedLight),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -229,16 +225,16 @@ private fun MultiPagePdfBanner(pageCount: Int) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
-                    .background(PrimaryBlue.copy(alpha = 0.15f)),
+                    .background(SnapDataRed),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PictureAsPdf,
                     contentDescription = null,
-                    tint = PrimaryBlue,
-                    modifier = Modifier.size(24.dp)
+                    tint = CardWhite,
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -247,12 +243,12 @@ private fun MultiPagePdfBanner(pageCount: Int) {
                     text = "Multi-Page PDF ($pageCount Pages)",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = PrimaryBlue
+                    color = SnapDataRed
                 )
                 Text(
-                    text = "All $pageCount pages will be rendered and OCR'd in sequence. Fields and table matrices will be unified across pages.",
+                    text = "All pages will be processed and tables merged automatically.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextDark
                 )
             }
         }
@@ -266,57 +262,94 @@ private fun DocumentPreviewCard(
     onRotateRight: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (bitmap != null) {
-        Card(
-            modifier = modifier.clip(RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+    Card(
+        modifier = modifier
+            .shadow(2.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+            .border(1.dp, LightBorder, RoundedCornerShape(16.dp))
+            .testTag("prep_document_preview_card"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (bitmap != null) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = "Document Preview",
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp),
-                    contentScale = ContentScale.Fit
+                        .padding(12.dp)
+                        .clip(RoundedCornerShape(8.dp))
                 )
-
-                // Rotation Action Overlay (Minimum 48dp touch targets)
-                Row(
+            } else {
+                Box(
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 12.dp)
-                        .background(Color(0x99000000), RoundedCornerShape(24.dp))
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxSize()
+                        .background(Color(0xFFF9F7F2)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    IconButton(
-                        onClick = onRotateLeft,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("rotate_left_btn")
-                    ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            Icons.AutoMirrored.Filled.RotateLeft,
-                            contentDescription = "Rotate Left 90 degrees",
-                            tint = Color.White
+                            imageVector = Icons.Outlined.Description,
+                            contentDescription = null,
+                            modifier = Modifier.size(54.dp),
+                            tint = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Document Ready for Analysis",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = SnapDataBlack
+                        )
+                        Text(
+                            text = "Pre-processing filters active",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
                         )
                     }
-                    Text("Rotate Image", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    IconButton(
-                        onClick = onRotateRight,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .testTag("rotate_right_btn")
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.RotateRight,
-                            contentDescription = "Rotate Right 90 degrees",
-                            tint = Color.White
-                        )
-                    }
+                }
+            }
+
+            // Quick Rotation Overlay Buttons
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(
+                    onClick = onRotateLeft,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(CardWhite.copy(alpha = 0.95f))
+                        .border(1.dp, LightBorder, CircleShape)
+                        .testTag("rotate_left_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.RotateLeft,
+                        contentDescription = "Rotate Left 90°",
+                        tint = SnapDataBlack,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onRotateRight,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(CardWhite.copy(alpha = 0.95f))
+                        .border(1.dp, LightBorder, CircleShape)
+                        .testTag("rotate_right_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.RotateRight,
+                        contentDescription = "Rotate Right 90°",
+                        tint = SnapDataBlack,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
@@ -334,49 +367,92 @@ private fun DocumentMetadataForm(
     onExpandedChange: (Boolean) -> Unit,
     onDoneAction: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        OutlinedTextField(
-            value = title,
-            onValueChange = onTitleChange,
-            label = { Text("Document Title") },
-            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onDoneAction() }),
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("doc_title_input")
-        )
-
-        ExposedDropdownMenuBox(
-            expanded = typeMenuExpanded,
-            onExpandedChange = onExpandedChange
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            Text(
+                text = "Document Information",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = SnapDataBlack,
+                fontSize = 15.sp
+            )
+
+            // Document Title
             OutlinedTextField(
-                value = selectedType.displayName,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Target Document Schema") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) },
-                leadingIcon = { Icon(Icons.Default.Category, contentDescription = null) },
+                value = title,
+                onValueChange = onTitleChange,
+                label = { Text("Document Title") },
+                singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                    .testTag("doc_type_dropdown")
+                    .testTag("doc_title_input"),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = SnapDataRed,
+                    unfocusedBorderColor = LightBorder,
+                    focusedLabelColor = SnapDataRed
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onDoneAction() })
             )
-            ExposedDropdownMenu(
+
+            // Document Type Dropdown
+            ExposedDropdownMenuBox(
                 expanded = typeMenuExpanded,
-                onDismissRequest = { onExpandedChange(false) }
+                onExpandedChange = onExpandedChange,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                DocumentType.values().forEach { type ->
-                    DropdownMenuItem(
-                        text = { Text("${type.displayName} (${type.category})") },
-                        onClick = {
-                            onTypeChange(type)
-                            onExpandedChange(false)
-                        },
-                        modifier = Modifier.heightIn(min = 48.dp)
+                OutlinedTextField(
+                    value = selectedType.displayName,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Document Category") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                        .testTag("doc_type_dropdown"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SnapDataRed,
+                        unfocusedBorderColor = LightBorder,
+                        focusedLabelColor = SnapDataRed
                     )
+                )
+
+                ExposedDropdownMenu(
+                    expanded = typeMenuExpanded,
+                    onDismissRequest = { onExpandedChange(false) },
+                    modifier = Modifier.background(CardWhite)
+                ) {
+                    DocumentType.entries.forEach { docType ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = docType.displayName,
+                                    fontWeight = if (selectedType == docType) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selectedType == docType) SnapDataRed else TextDark
+                                )
+                            },
+                            onClick = {
+                                onTypeChange(docType)
+                                onExpandedChange(false)
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
                 }
             }
         }
@@ -388,70 +464,48 @@ private fun EnhancementFiltersCard(
     options: ProcessingOptions,
     onOptionsChange: (ProcessingOptions) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Image Enhancement & Preprocessing Filters",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Adaptive Contrast Enhancement", fontWeight = FontWeight.SemiBold)
-                        Text("Boosts text edges and clarity for highest OCR precision", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(
-                        checked = options.enhanceContrast,
-                        onCheckedChange = { onOptionsChange(options.copy(enhanceContrast = it)) },
-                        modifier = Modifier.testTag("toggle_contrast")
-                    )
-                }
+            Text(
+                text = "Extraction Enhancements",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = SnapDataBlack,
+                fontSize = 15.sp
+            )
 
-                HorizontalDivider()
+            OptionSwitchRow(
+                title = "Auto-Contrast & Shadow Removal",
+                subtitle = "Enhances faint ink and receipts",
+                checked = options.enhanceContrast,
+                onCheckedChange = { onOptionsChange(options.copy(enhanceContrast = it)) }
+            )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Auto-Crop & Margin Straightening", fontWeight = FontWeight.SemiBold)
-                        Text("Trims excess background edges and scanner borders", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(
-                        checked = options.autoCrop,
-                        onCheckedChange = { onOptionsChange(options.copy(autoCrop = it)) },
-                        modifier = Modifier.testTag("toggle_autocrop")
-                    )
-                }
+            OptionSwitchRow(
+                title = "Perspective Deskewing",
+                subtitle = "Straightens angled photo captures",
+                checked = options.deskew,
+                onCheckedChange = { onOptionsChange(options.copy(deskew = it)) }
+            )
 
-                HorizontalDivider()
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Shadow & Glare Removal", fontWeight = FontWeight.SemiBold)
-                        Text("Equalizes lighting gradient across paper page", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(
-                        checked = options.removeShadows,
-                        onCheckedChange = { onOptionsChange(options.copy(removeShadows = it)) },
-                        modifier = Modifier.testTag("toggle_shadows")
-                    )
-                }
-            }
+            OptionSwitchRow(
+                title = "Detect Tables & Line Items",
+                subtitle = "Parses tabular data and invoice rows",
+                checked = options.detectTables,
+                onCheckedChange = { onOptionsChange(options.copy(detectTables = it)) }
+            )
         }
     }
 }
@@ -461,62 +515,71 @@ private fun PrivacyEngineCard(
     options: ProcessingOptions,
     onOptionsChange: (ProcessingOptions) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Privacy & Processing Engine",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-        )
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = if (options.enableCloudAi && !options.forceOfflineAi) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceVariant
-            )
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (options.enableCloudAi && !options.forceOfflineAi) Icons.Default.CloudQueue else Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = if (options.enableCloudAi && !options.forceOfflineAi) PrimaryBlue else Color(0xFF10B981),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (options.enableCloudAi && !options.forceOfflineAi) "Cloud AI Enhancement" else "100% On-Device Mode",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Text(
-                            text = if (options.enableCloudAi && !options.forceOfflineAi)
-                                "Transmits image to Gemini / Enterprise Backend for multimodal semantic reasoning."
-                            else
-                                "Strict offline local parsing via ML Kit OCR. Zero network data transfer.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = options.enableCloudAi && !options.forceOfflineAi,
-                        onCheckedChange = { isChecked ->
-                            onOptionsChange(
-                                options.copy(
-                                    enableCloudAi = isChecked,
-                                    forceOfflineAi = !isChecked
-                                )
-                            )
-                        },
-                        modifier = Modifier.testTag("toggle_cloud_ai")
-                    )
-                }
-            }
+            Text(
+                text = "Privacy & Processing Engine",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = SnapDataBlack,
+                fontSize = 15.sp
+            )
+
+            OptionSwitchRow(
+                title = "100% Offline On-Device OCR",
+                subtitle = "Never sends data outside device",
+                checked = options.forceOfflineAi,
+                onCheckedChange = { onOptionsChange(options.copy(forceOfflineAi = it)) }
+            )
+
+            OptionSwitchRow(
+                title = "PII Redaction Engine",
+                subtitle = "Masks SSN, credit cards & phone numbers",
+                checked = options.enablePiiRedaction,
+                onCheckedChange = { onOptionsChange(options.copy(enablePiiRedaction = it)) }
+            )
         }
+    }
+}
+
+@Composable
+private fun OptionSwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = TextDark)
+            Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary, fontSize = 11.sp)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = CardWhite,
+                checkedTrackColor = SnapDataRed,
+                uncheckedThumbColor = TextSecondary,
+                uncheckedTrackColor = SubtleBorder
+            )
+        )
     }
 }

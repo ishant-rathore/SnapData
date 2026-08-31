@@ -1,0 +1,63 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Document Background Mask -->
+    <path
+        android:fillColor="#0D0E12"
+        android:pathData="M 32,15 L 80,15 L 98,33 L 98,96 C 98,103 93,108 86,108 L 34,108 C 27,108 22,103 22,96 L 22,25 C 22,18 27,15 32,15 Z" />
+
+    <!-- Simplified Circuit Lines (Vivid Red) -->
+    <path
+        android:strokeColor="#EA2129"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M 32,32 L 74,32 M 32,46 L 86,46" />
+
+    <!-- Circuit Nodes (White & Red) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M 40,32 m -3.5,0 a 3.5,3.5 0 1,0 7,0 a 3.5,3.5 0 1,0 -7,0" />
+    <path android:fillColor="#EA2129" android:pathData="M 68,32 m -3.5,0 a 3.5,3.5 0 1,0 7,0 a 3.5,3.5 0 1,0 -7,0" />
+    <path android:fillColor="#EA2129" android:pathData="M 52,46 m -3.5,0 a 3.5,3.5 0 1,0 7,0 a 3.5,3.5 0 1,0 -7,0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M 80,46 m -3.5,0 a 3.5,3.5 0 1,0 7,0 a 3.5,3.5 0 1,0 -7,0" />
+
+    <!-- Camera Aperture Shutter (Red Blades) -->
+    <path
+        android:fillColor="#EA2129"
+        android:pathData="M 60,80 m -20,0 a 20,20 0 1,0 40,0 a 20,20 0 1,0 -40,0" />
+
+    <!-- Blade Seam Lines (Dark Separator Cuts) -->
+    <path
+        android:strokeColor="#0D0E12"
+        android:strokeWidth="2"
+        android:pathData="M 60,60 L 65,75 M 77,70 L 65,84 M 77,90 L 59,88 M 60,100 L 55,85 M 43,90 L 55,76 M 43,70 L 61,72" />
+
+    <!-- Aperture Center Polygon (Dark Core) -->
+    <path
+        android:fillColor="#0D0E12"
+        android:pathData="M 61,72 L 65,75 L 65,84 L 59,88 L 55,85 L 55,76 Z" />
+
+    <!-- Aperture Outer Ring (Crisp White Stroke) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:pathData="M 60,80 m -21,0 a 21,21 0 1,0 42,0 a 21,21 0 1,0 -42,0" />
+
+    <!-- Document Main Border Outline (Crisp White) -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 32,15 L 80,15 L 98,33 L 98,96 C 98,103 93,108 86,108 L 34,108 C 27,108 22,103 22,96 L 22,25 C 22,18 27,15 32,15 Z" />
+
+    <!-- Fold Crease Line -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 80,15 L 80,33 L 98,33" />
+
+</vector>

@@ -25,7 +25,8 @@ object AppLogger {
         SHARING("SnapData.Sharing"),
         PIPELINE("SnapData.Pipeline"),
         APP("SnapData.App"),
-        AUTH("SnapData.Auth")
+        AUTH("SnapData.Auth"),
+        STORAGE("SnapData.Storage")
     }
 
     private val BEARER_REGEX = Regex("(?i)bearer\\s+([a-zA-Z0-9_\\-\\.]+)")

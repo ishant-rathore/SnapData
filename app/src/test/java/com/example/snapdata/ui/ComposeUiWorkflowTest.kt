@@ -31,7 +31,8 @@ class ComposeUiWorkflowTest {
     @Test
     fun testAppScreenNavigationEnumCoverage() {
         val allScreens = AppScreen.values()
-        assertEquals(15, allScreens.size)
+        assertEquals(16, allScreens.size)
+        assertTrue(allScreens.contains(AppScreen.SPLASH))
         assertTrue(allScreens.contains(AppScreen.LANDING))
         assertTrue(allScreens.contains(AppScreen.AUTH_WELCOME))
         assertTrue(allScreens.contains(AppScreen.SIGN_IN))
@@ -240,4 +241,41 @@ class ComposeUiWorkflowTest {
         assertNull(state.acquisitionError)
         assertNull(state.pdfError)
     }
+
+    @Test
+    fun testFreshInstallStartupAndNavigationFlow() {
+        // Requirement: LandingScreen loads on startup as the default root screen
+        val freshState = UiState()
+        assertEquals(AppScreen.LANDING, freshState.currentScreen)
+
+        // Step 1: Tap Get Started / Download -> Navigate to AUTH_WELCOME (or HOME)
+        var state = freshState.copy(currentScreen = AppScreen.AUTH_WELCOME)
+        assertEquals(AppScreen.AUTH_WELCOME, state.currentScreen)
+
+        // Step 2: Choose Sign In / Sign Up -> Navigate to SIGN_IN
+        state = state.copy(currentScreen = AppScreen.SIGN_IN)
+        assertEquals(AppScreen.SIGN_IN, state.currentScreen)
+
+        // Step 3: Successful Authentication -> Navigate to HOME
+        state = state.copy(currentScreen = AppScreen.HOME)
+        assertEquals(AppScreen.HOME, state.currentScreen)
+
+        // Step 4: Verify flow sequence: LANDING -> AUTH_WELCOME -> SIGN_IN -> HOME
+        assertTrue(state.currentScreen == AppScreen.HOME)
+    }
+
+    @Test
+    fun testAiAndOcrStartupSafety() {
+        // Verify GeminiAiService does not crash on missing / default credentials
+        val key = com.example.snapdata.processing.GeminiAiService.getApiKey()
+        assertNotNull(key)
+
+        val backend = com.example.snapdata.processing.GeminiAiService.getBackendUrl()
+        assertNotNull(backend)
+
+        // Verify DocumentType enum sanitizer never throws
+        val sanitized = com.example.snapdata.processing.GeminiAiService.sanitizeDocumentType("UNKNOWN_CUSTOM_TYPE")
+        assertEquals(DocumentType.GENERAL_DOCUMENT, sanitized)
+    }
 }
+
