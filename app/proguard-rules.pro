@@ -53,3 +53,20 @@
 # Jetpack Compose & Lifecycle Runtime
 -keep class androidx.compose.** { *; }
 -keep class androidx.lifecycle.** { *; }
+
+# Firebase Authentication
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+-keep class com.google.firebase.auth.FirebaseAuth { *; }
+-keep class com.google.firebase.auth.FirebaseUser { *; }
+-keepclassmembers class com.google.firebase.auth.** { *; }
+
+# EncryptedSharedPreferences / Jetpack Security Crypto
+-keep class androidx.security.crypto.** { *; }
+-dontwarn androidx.security.crypto.**
+
+# SnapData Auth Layer
+-keep class com.example.snapdata.auth.** { *; }
+

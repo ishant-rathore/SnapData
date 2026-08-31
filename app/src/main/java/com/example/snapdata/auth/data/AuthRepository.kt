@@ -9,9 +9,11 @@ import kotlinx.coroutines.flow.StateFlow
  * Guarantees:
  * - Decouples ViewModels from provider specifics.
  * - Single source of truth for authentication & session state.
+ * - Production default: [FirebaseAuthProvider] (real accounts, real email verification).
+ * - Test/offline fallback: [ProductionAuthProvider] (local session, guest mode always works).
  */
 class AuthRepository(
-    private val provider: AuthenticationProvider = ProductionAuthProvider()
+    private val provider: AuthenticationProvider
 ) {
     val authState: StateFlow<AuthState> = provider.authState
     val currentUser: AuthUser? get() = provider.currentUser
@@ -50,5 +52,26 @@ class AuthRepository(
 
     fun setNetworkAvailable(isAvailable: Boolean) {
         provider.setNetworkAvailable(isAvailable)
+    }
+
+    companion object {
+        /**
+         * Creates an AuthRepository with the appropriate provider.
+         *
+         * If Firebase is available (google-services.json present + Firebase initialized),
+         * uses [FirebaseAuthProvider] for real production authentication.
+         *
+         * Falls back to [ProductionAuthProvider] for local/test environments.
+         */
+        fun create(sessionStorage: SecureSessionStorage): AuthRepository {
+            return try {
+                // Verify Firebase is initialized by accessing FirebaseAuth
+                com.google.firebase.auth.FirebaseAuth.getInstance()
+                AuthRepository(FirebaseAuthProvider(sessionStorage))
+            } catch (e: Exception) {
+                // Firebase not configured (no google-services.json) → use local provider
+                AuthRepository(ProductionAuthProvider(sessionStorage))
+            }
+        }
     }
 }

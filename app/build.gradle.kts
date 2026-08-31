@@ -5,7 +5,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.secrets)
+    alias(libs.plugins.google.services) apply false
 }
+
+// Apply google-services plugin only when google-services.json is present
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 
 android {
     namespace = "com.example.snapdata"
@@ -108,6 +115,16 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
 
+    // Security: EncryptedSharedPreferences for secure session storage
+    implementation(libs.androidx.security.crypto)
+
+    // Firebase: Real Authentication Backend
+    // Requires app/google-services.json — place your Firebase config file here.
+    // See: https://console.firebase.google.com/ → Project Settings → google-services.json
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.kotlinx.coroutines.play.services)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -133,5 +150,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

@@ -23,7 +23,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.example.snapdata.auth.data.AuthRepository
-import com.example.snapdata.auth.data.ProductionAuthProvider
 import com.example.snapdata.auth.data.SecureSessionStorage
 import com.example.snapdata.auth.domain.*
 import java.io.File
@@ -113,10 +112,11 @@ data class UiState(
 class SnapDataViewModel(
     application: Application,
     private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
-    private val authRepository: AuthRepository = AuthRepository(
-        ProductionAuthProvider(SecureSessionStorage(application))
+    private val authRepository: AuthRepository = AuthRepository.create(
+        SecureSessionStorage(application)
     )
 ) : AndroidViewModel(application) {
+
 
     companion object {
         private const val KEY_PENDING_CAMERA_URI = "snapdata_pending_camera_uri"

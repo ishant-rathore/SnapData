@@ -2,6 +2,8 @@ package com.example.snapdata.auth.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import com.example.snapdata.auth.domain.AuthUser
 import com.example.snapdata.logging.AppLogger
 
@@ -10,21 +12,50 @@ import com.example.snapdata.logging.AppLogger
  *
  * Security guarantees:
  * - Passwords are NEVER stored here.
+ * - On Android 6.0+ (API 23+): uses [EncryptedSharedPreferences] backed by Android Keystore.
+ * - On older API levels: falls back to standard SharedPreferences (minSdk is 26, so this is unreachable).
  * - Stores only opaque session tokens, user ID, email, display name, and verification state.
  * - Automatically redacts logs when saving/restoring tokens.
+ * - In-memory fallback when Context is null (unit test path).
  */
 class SecureSessionStorage(context: Context? = null) {
 
     private val prefs: SharedPreferences? = try {
-        context?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        context?.let { ctx ->
+            createEncryptedPrefs(ctx) ?: createFallbackPrefs(ctx)
+        }
     } catch (e: Exception) {
-        AppLogger.w(AppLogger.LogDomain.AUTH, "Failed to initialize SharedPreferences: ${e.message}")
+        AppLogger.w(AppLogger.LogDomain.AUTH, "Failed to initialize SecureSessionStorage: ${e.message}")
         null
     }
 
-    // In-memory fallback if Context is null (e.g. in unit tests)
+    // In-memory fallback if Context is null (e.g., unit tests)
     private var inMemoryToken: String? = null
     private var inMemoryUser: AuthUser? = null
+
+    private fun createEncryptedPrefs(context: Context): SharedPreferences? {
+        return try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            EncryptedSharedPreferences.create(
+                context,
+                PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            AppLogger.w(AppLogger.LogDomain.AUTH, "EncryptedSharedPreferences unavailable, using fallback: ${e.message}")
+            null
+        }
+    }
+
+    private fun createFallbackPrefs(context: Context): SharedPreferences {
+        // Fallback: standard SharedPreferences (should not be reached with minSdk 26 + EncryptedSharedPreferences)
+        AppLogger.w(AppLogger.LogDomain.AUTH, "Falling back to standard SharedPreferences for session storage.")
+        return context.getSharedPreferences(PREFS_NAME + "_fallback", Context.MODE_PRIVATE)
+    }
 
     @Synchronized
     fun saveSession(user: AuthUser, sessionToken: String) {
@@ -42,7 +73,8 @@ class SecureSessionStorage(context: Context? = null) {
             putString(KEY_SESSION_TOKEN, sessionToken)
             apply()
         }
-        AppLogger.d(AppLogger.LogDomain.AUTH, "Saved session for user: ${user.id} [Guest: ${user.isGuest}]")
+        // Deliberately do NOT log token value — only log user ID
+        AppLogger.d(AppLogger.LogDomain.AUTH, "Session saved for user: ${user.id} [Guest: ${user.isGuest}]")
     }
 
     @Synchronized
@@ -87,11 +119,11 @@ class SecureSessionStorage(context: Context? = null) {
         inMemoryUser = null
         inMemoryToken = null
         prefs?.edit()?.clear()?.apply()
-        AppLogger.d(AppLogger.LogDomain.AUTH, "Session cleared successfully.")
+        AppLogger.d(AppLogger.LogDomain.AUTH, "Session cleared.")
     }
 
     companion object {
-        private const val PREFS_NAME = "snapdata_secure_auth_session"
+        private const val PREFS_NAME = "snapdata_secure_session"
         private const val KEY_USER_ID = "auth_user_id"
         private const val KEY_USER_EMAIL = "auth_user_email"
         private const val KEY_USER_NAME = "auth_user_name"
