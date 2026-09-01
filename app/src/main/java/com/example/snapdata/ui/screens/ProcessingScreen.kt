@@ -241,26 +241,30 @@ fun ProcessingScreen(viewModel: SnapDataViewModel) {
                             // Step 1: Pre-processing
                             ProcessingStepRow(
                                 stepNumber = 1,
-                                title = "Pre-processing",
-                                subtitle = "Enhancing image quality",
+                                title = "Document Preprocessing",
+                                subtitle = "Contrast enhancement, deskew & auto-crop",
                                 isDone = currentStageIndex > 0,
                                 isActive = currentStageIndex == 0
                             )
 
-                            // Step 2: OCR Processing
+                            // Step 2: OCR Recognition
                             ProcessingStepRow(
                                 stepNumber = 2,
-                                title = "OCR Processing",
-                                subtitle = "Extracting text from document",
+                                title = "Optical Character Recognition",
+                                subtitle = "On-Device ML Kit character & token extraction",
                                 isDone = currentStageIndex > 1,
                                 isActive = currentStageIndex == 1
                             )
 
-                            // Step 3: AI Analysis
+                            // Step 3: Offline AI Understanding
+                            val isCloud = uiState.processingOptions.enableCloudAi && !uiState.processingOptions.forceOfflineAi
+                            val aiStepTitle = if (isCloud) "Cloud AI Semantic Analysis" else "On-Device AI Document Understanding"
+                            val aiStepSubtitle = if (isCloud) "Gemini Multimodal Cloud Extraction" else "Neural classification, slot-filling & table matrices"
+
                             ProcessingStepRow(
                                 stepNumber = 3,
-                                title = "AI Analysis",
-                                subtitle = "Understanding structure & data",
+                                title = aiStepTitle,
+                                subtitle = aiStepSubtitle,
                                 isDone = currentStageIndex > 2,
                                 isActive = currentStageIndex == 2
                             )
@@ -268,13 +272,14 @@ fun ProcessingScreen(viewModel: SnapDataViewModel) {
                             // Step 4: Finalizing
                             ProcessingStepRow(
                                 stepNumber = 4,
-                                title = "Finalizing",
-                                subtitle = "Preparing results",
+                                title = "Schema Validation & Formatting",
+                                subtitle = "Verifying confidence scores & building review payload",
                                 isDone = currentStageIndex >= 3,
                                 isActive = currentStageIndex == 3
                             )
                         }
                     }
+
 
                     Spacer(modifier = Modifier.height(20.dp))
 

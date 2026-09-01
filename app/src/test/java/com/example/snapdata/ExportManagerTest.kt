@@ -29,15 +29,15 @@ class ExportManagerTest {
         rawOcrText = "Raw OCR Text Line 1\nRaw OCR Text Line 2",
         fields = listOf(
             ExtractedField(key = "Invoice #", value = "INV-001", category = "Identifier"),
-            ExtractedField(key = "Total", value = "$500.00", category = "Financial")
+            ExtractedField(key = "Total", value = "₹5,000.00", category = "Financial")
         ),
         tables = listOf(
             ExtractedTable(
                 name = "Items",
                 headers = mutableListOf("Description", "Price"),
                 rows = mutableListOf(
-                    mutableListOf("Service A", "$200"),
-                    mutableListOf("Service B", "$300")
+                    mutableListOf("Service A", "₹2,000"),
+                    mutableListOf("Service B", "₹3,000")
                 )
             )
         ),
@@ -275,8 +275,8 @@ class ExportManagerTest {
             name = "Summary Taxes",
             headers = mutableListOf("Tax Type", "Rate", "Amount"),
             rows = mutableListOf(
-                mutableListOf("GST", "18%", "$90.00"),
-                mutableListOf("Cess", "1%", "$5.00")
+                mutableListOf("GST", "18%", "₹900.00"),
+                mutableListOf("Cess", "1%", "₹50.00")
             )
         )
 

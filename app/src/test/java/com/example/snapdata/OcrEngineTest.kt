@@ -13,19 +13,19 @@ class OcrEngineTest {
         val invoiceText = """
             TAX INVOICE
             Invoice #: INV-9812
-            Date: 2026-08-15
-            Due Date: 2026-09-15
-            Vendor: Industrial Dynamics Corp
-            Client: Global Rail Systems
+            Date: 15/08/2026
+            Due Date: 15/09/2026
+            Vendor: Industrial Dynamics India Pvt Ltd
+            Client: Bharat Rail Systems
             
             Item | Qty | Price | Total
-            Steel Bearings 50mm | 100 | $15.00 | $1500.00
-            Hydraulic Seals | 20 | $40.00 | $800.00
-            Control Valves 2-inch | 5 | $120.00 | $600.00
+            Steel Bearings 50mm | 100 | ₹150.00 | ₹15000.00
+            Hydraulic Seals | 20 | ₹400.00 | ₹8000.00
+            Control Valves 2-inch | 5 | ₹1200.00 | ₹6000.00
             
-            Subtotal: $2900.00
-            Tax: $232.00
-            Grand Total: $3132.00
+            Subtotal: ₹29000.00
+            Tax: ₹2320.00
+            Grand Total: ₹31320.00
         """.trimIndent()
 
         val result = OcrEngine.parseTextToStructuredData(invoiceText)
@@ -44,24 +44,24 @@ class OcrEngineTest {
     @Test
     fun testParseReceipt_MultiItemAndTotals() {
         val receiptText = """
-            FreshMart Grocery Store #104
-            Cashier: Maria S.
+            Rajasthan Mart Superstore #104
+            Cashier: Priya M.
             Date: 10/12/2026
             
-            Organic Whole Milk  1 x $4.99  $4.99
-            Sourdough Bread     2 x $3.50  $7.00
-            Avocado Bag         1 x $5.49  $5.49
+            Organic Cow Milk    1 x ₹65.00  ₹65.00
+            Whole Wheat Bread   2 x ₹45.00  ₹90.00
+            Tata Tea Gold       1 x ₹310.00 ₹310.00
             
-            Subtotal: $17.48
-            Tax: $1.40
-            Total Amount: $18.88
-            Change Due: $1.12
+            Subtotal: ₹465.00
+            Tax: ₹23.25
+            Total Amount: ₹488.25
+            Change Due: ₹11.75
         """.trimIndent()
 
         val result = OcrEngine.parseTextToStructuredData(receiptText)
 
         assertEquals(DocumentType.RECEIPT, result.detectedDocType)
-        assertTrue(result.fields.any { it.key.contains("Cashier", ignoreCase = true) || it.value.contains("Maria") })
+        assertTrue(result.fields.any { it.key.contains("Cashier", ignoreCase = true) || it.value.contains("Priya") })
         assertTrue(result.fields.any { it.key.contains("Subtotal", ignoreCase = true) })
         assertTrue(result.fields.any { it.key.contains("Total", ignoreCase = true) })
         assertTrue(result.tables.isNotEmpty())
@@ -72,17 +72,17 @@ class OcrEngineTest {
     fun testParseBankStatement_WithLedgerTable() {
         val statementText = """
             STATEMENT OF ACCOUNT
-            Bank: Standard Trust Bank
-            Account Holder: Alex Mercer
+            Bank: State Bank of India
+            Account Holder: Rajesh Kumar Verma
             Account Number: 9876543210
             Statement Period: 01-Aug-2026 to 31-Aug-2026
             
             Date | Description | Ref | Debit | Credit | Balance
-            02-Aug-2026 | Payroll Direct Dep | REF001 | - | $4500.00 | $7200.00
-            05-Aug-2026 | Office Rent | REF002 | $1200.00 | - | $6000.00
-            14-Aug-2026 | Cloud Services | REF003 | $350.00 | - | $5650.00
+            02-Aug-2026 | Salary Direct Dep | REF001 | - | ₹45000.00 | ₹72000.00
+            05-Aug-2026 | Office Rent | REF002 | ₹12000.00 | - | ₹60000.00
+            14-Aug-2026 | Cloud Services | REF003 | ₹3500.00 | - | ₹56500.00
             
-            Account Balance: $5650.00
+            Account Balance: ₹56500.00
         """.trimIndent()
 
         val result = OcrEngine.parseTextToStructuredData(statementText)
@@ -98,12 +98,12 @@ class OcrEngineTest {
     fun testParseApplicationForm_WithCheckboxes() {
         val formText = """
             APPLICATION FORM - MEMBERSHIP REGISTRATION
-            Full Name: Jane Doe
+            Full Name: Aarav Sharma
             Date of Birth: 1992-04-15
-            Email Address: jane.doe@example.com
-            Phone Number: +1-555-0199
+            Email Address: aarav.sharma@example.in
+            Phone Number: +91 98765 43210
             Status: [X] Active Member   [ ] Pending Review
-            Applicant Signature: Jane Doe
+            Applicant Signature: Aarav Sharma
         """.trimIndent()
 
         val result = OcrEngine.parseTextToStructuredData(formText)
@@ -118,9 +118,9 @@ class OcrEngineTest {
     fun testParseMarkSheet_Transcript() {
         val marksheetText = """
             TRANSCRIPT OF RECORDS - SEMESTER IV
-            Student Name: David Kim
+            Student Name: Ananya Sharma
             Registration Number: REG-2024-889
-            Program: Bachelor of Science in Computer Engineering
+            Program: Bachelor of Technology in Computer Science & AI
             
             Course Code | Course Title | Credits | Grade | Grade Points
             CS401 | Distributed Systems | 4.0 | A | 16.0
@@ -128,7 +128,7 @@ class OcrEngineTest {
             CS403 | Mobile Computing | 3.0 | A+ | 12.0
             
             Total Credits: 11.0
-            CGPA: 3.89
+            CGPA: 9.45
         """.trimIndent()
 
         val result = OcrEngine.parseTextToStructuredData(marksheetText)
@@ -146,9 +146,9 @@ class OcrEngineTest {
         val tableText = """
             Quarterly Regional Sales Data Matrix
             Region       Q1_Sales    Q2_Sales    Q3_Sales    Growth_Rate
-            North_America  $450,000    $520,000    $610,000    +17.3%
-            Europe         $380,000    $410,000    $445,000    +8.5%
-            Asia_Pacific   $510,000    $590,000    $720,000    +22.0%
+            North_Zone     ₹4,50,000   ₹5,20,000   ₹6,10,000   +17.3%
+            West_Zone      ₹3,80,000   ₹4,10,000   ₹4,45,000   +8.5%
+            South_Zone     ₹5,10,000   ₹5,90,000   ₹7,20,000   +22.0%
         """.trimIndent()
 
         val result = OcrEngine.parseTextToStructuredData(tableText)
@@ -164,13 +164,13 @@ class OcrEngineTest {
             TAX   INVOICE  
             Invoice No. :   INV-40912  
             Date := 2026/11/02
-            Client Name  -  Acme Logistics
+            Client Name  -  Apex Logistics India
             
             Item Description | Qty | Amount
-            Shipping Pallet A | 10 | $500.00
-            Bubble Wrap Rolls | 5 | $75.00
+            Shipping Pallet A | 10 | ₹5,000.00
+            Bubble Wrap Rolls | 5 | ₹750.00
             
-            Total : $575.00
+            Total : ₹5,750.00
         """.trimIndent()
 
         val result = OcrEngine.parseTextToStructuredData(noisyCameraText)
@@ -215,9 +215,9 @@ class OcrEngineTest {
         // High quality text
         val highQuality = """
             Invoice #: INV-100
-            Vendor: Alpha Corp
+            Vendor: Alpha Corp India
             Date: 2026-01-01
-            Total: $500.00
+            Total: ₹5,000.00
         """.trimIndent()
         val highResult = OcrEngine.parseTextToStructuredData(highQuality)
 

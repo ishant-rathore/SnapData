@@ -85,28 +85,28 @@ class ProductionAuthProviderTest {
 
     @Test
     fun `signUp with empty email returns EmptyEmail error`() = runTest {
-        val result = provider.signUp("Test User", "", "Secure@123".toCharArray())
+        val result = provider.signUp("Aarav Sharma", "", "Secure@123".toCharArray())
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_EMAIL_EMPTY", (result as AuthResult.Error).error.errorCode)
     }
 
     @Test
     fun `signUp with invalid email format returns InvalidEmailFormat error`() = runTest {
-        val result = provider.signUp("Test User", "not-an-email", "Secure@123".toCharArray())
+        val result = provider.signUp("Aarav Sharma", "not-an-email", "Secure@123".toCharArray())
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_EMAIL_INVALID", (result as AuthResult.Error).error.errorCode)
     }
 
     @Test
     fun `signUp with empty password returns EmptyPassword error`() = runTest {
-        val result = provider.signUp("Test User", "test@example.com", charArrayOf())
+        val result = provider.signUp("Aarav Sharma", "aarav.sharma@example.in", charArrayOf())
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_PASSWORD_EMPTY", (result as AuthResult.Error).error.errorCode)
     }
 
     @Test
     fun `signUp with weak password returns WeakPassword error`() = runTest {
-        val result = provider.signUp("Test User", "test@example.com", "password".toCharArray())
+        val result = provider.signUp("Aarav Sharma", "aarav.sharma@example.in", "password".toCharArray())
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_PASSWORD_WEAK", (result as AuthResult.Error).error.errorCode)
     }
@@ -131,14 +131,14 @@ class ProductionAuthProviderTest {
 
     @Test
     fun `signIn with empty password returns EmptyPassword error`() = runTest {
-        val result = provider.signIn("test@example.com", charArrayOf())
+        val result = provider.signIn("aarav.sharma@example.in", charArrayOf())
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_PASSWORD_EMPTY", (result as AuthResult.Error).error.errorCode)
     }
 
     @Test
     fun `signIn with non-existent account returns InvalidCredentials`() = runTest {
-        val result = provider.signIn("nonexistent@example.com", "Secure@123".toCharArray())
+        val result = provider.signIn("nonexistent@example.in", "Secure@123".toCharArray())
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_INVALID_CREDENTIALS", (result as AuthResult.Error).error.errorCode)
     }
@@ -150,7 +150,7 @@ class ProductionAuthProviderTest {
     @Test
     fun `signIn returns NetworkUnavailable when offline`() = runTest {
         provider.setNetworkAvailable(false)
-        val result = provider.signIn("test@example.com", "Secure@123".toCharArray())
+        val result = provider.signIn("aarav.sharma@example.in", "Secure@123".toCharArray())
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_NETWORK_UNAVAILABLE", (result as AuthResult.Error).error.errorCode)
     }
@@ -158,7 +158,7 @@ class ProductionAuthProviderTest {
     @Test
     fun `signUp returns NetworkUnavailable when offline`() = runTest {
         provider.setNetworkAvailable(false)
-        val result = provider.signUp("Test User", "test@example.com", "Secure@123".toCharArray())
+        val result = provider.signUp("Aarav Sharma", "aarav.sharma@example.in", "Secure@123".toCharArray())
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_NETWORK_UNAVAILABLE", (result as AuthResult.Error).error.errorCode)
     }
@@ -166,7 +166,7 @@ class ProductionAuthProviderTest {
     @Test
     fun `sendPasswordReset returns NetworkUnavailable when offline`() = runTest {
         provider.setNetworkAvailable(false)
-        val result = provider.sendPasswordReset("test@example.com")
+        val result = provider.sendPasswordReset("aarav.sharma@example.in")
         assertTrue(result is AuthResult.Error)
         assertEquals("AUTH_NETWORK_UNAVAILABLE", (result as AuthResult.Error).error.errorCode)
     }
@@ -232,9 +232,9 @@ class ProductionAuthProviderTest {
     fun `rate limiting activates after 5 failed sign-in attempts`() = runTest {
         provider.setNetworkAvailable(true)
         repeat(5) {
-            provider.signIn("ratelimit@example.com", "WrongPass@1".toCharArray())
+            provider.signIn("ratelimit@example.in", "WrongPass@1".toCharArray())
         }
-        val result = provider.signIn("ratelimit@example.com", "WrongPass@1".toCharArray())
+        val result = provider.signIn("ratelimit@example.in", "WrongPass@1".toCharArray())
         assertTrue("Should be rate limited", result is AuthResult.Error)
         assertEquals("AUTH_RATE_LIMITED", (result as AuthResult.Error).error.errorCode)
     }
@@ -270,7 +270,7 @@ class ProductionAuthProviderTest {
     @Test
     fun `sendPasswordReset with valid email returns success even for non-existent accounts`() = runTest {
         // Must return generic success to prevent account enumeration
-        val result = provider.sendPasswordReset("nonexistent@example.com")
+        val result = provider.sendPasswordReset("nonexistent@example.in")
         assertTrue("Must return success to prevent email enumeration", result is AuthResult.Success)
     }
 }

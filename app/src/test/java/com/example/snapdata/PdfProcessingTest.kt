@@ -16,16 +16,16 @@ class PdfProcessingTest {
         val page1Text = """
             COMMERCIAL INVOICE
             Invoice No: INV-1001
-            Date: 2026-08-10
-            Customer: Acme Manufacturing Ltd
+            Date: 10/08/2026
+            Customer: Sharma Electronics Pvt Ltd
             
             Description | Qty | Unit Price | Amount
-            Industrial Valve | 5 | $200.00 | $1000.00
-            Gasket Kit | 10 | $15.00 | $150.00
+            Industrial Valve | 5 | ₹2,000.00 | ₹10,000.00
+            Gasket Kit | 10 | ₹150.00 | ₹1,500.00
             
-            Subtotal: $1150.00
-            Tax: $92.00
-            Total Due: $1242.00
+            Subtotal: ₹11,500.00
+            Tax: ₹1,035.00
+            Total Due: ₹12,535.00
         """.trimIndent()
 
         val page1Ocr = OcrEngine.parseTextToStructuredData(page1Text)
@@ -53,26 +53,26 @@ class PdfProcessingTest {
         val page1Text = """
             STATEMENT OF ACCOUNT
             Account Number: ACC-998877
-            Statement Date: 2026-08-01
-            Account Holder: Enterprise Solutions Corp
+            Statement Date: 01/08/2026
+            Account Holder: Bharat Tech Ventures Pvt Ltd
             
             Date | Transaction Details | Debit | Credit | Balance
-            08/01/2026 | Opening Balance | - | - | $15000.00
-            08/03/2026 | Wire Transfer Recv | - | $5000.00 | $20000.00
+            01/08/2026 | Opening Balance | - | - | ₹1,50,000.00
+            03/08/2026 | NEFT Transfer Recv | - | ₹50,000.00 | ₹2,00,000.00
         """.trimIndent()
 
         val page2Text = """
             STATEMENT OF ACCOUNT
             Account Number: ACC-998877
-            Statement Date: 2026-08-01
+            Statement Date: 01/08/2026
             
             Date | Transaction Details | Debit | Credit | Balance
-            08/10/2026 | Cloud Services Bill | $1200.00 | - | $18800.00
-            08/15/2026 | Hardware Supplier | $3500.00 | - | $15300.00
+            10/08/2026 | Cloud Services Bill | ₹12,000.00 | - | ₹1,88,000.00
+            15/08/2026 | Hardware Supplier | ₹35,000.00 | - | ₹1,53,000.00
             
-            Total Debits: $4700.00
-            Total Credits: $5000.00
-            Closing Balance: $15300.00
+            Total Debits: ₹47,000.00
+            Total Credits: ₹50,000.00
+            Closing Balance: ₹1,53,000.00
         """.trimIndent()
 
         val p1Ocr = OcrEngine.parseTextToStructuredData(page1Text)
@@ -106,11 +106,11 @@ class PdfProcessingTest {
         val page1Text = """
             PURCHASE ORDER
             PO Number: PO-5544
-            Vendor: Industrial Supplies Co
+            Vendor: Apex Industrial Supplies Pvt Ltd
             
             Item # | Description | Quantity | Unit Cost | Total
-            001 | Titanium Rods 10mm | 50 | $30.00 | $1500.00
-            002 | Carbon Steel Plates | 20 | $100.00 | $2000.00
+            001 | Titanium Rods 10mm | 50 | ₹300.00 | ₹15,000.00
+            002 | Carbon Steel Plates | 20 | ₹1,000.00 | ₹20,000.00
         """.trimIndent()
 
         val page2Text = """
@@ -118,8 +118,8 @@ class PdfProcessingTest {
             PO Number: PO-5544
             
             Item # | Description | Quantity | Unit Cost | Total
-            003 | Stainless Bolts M8 | 500 | $0.50 | $250.00
-            004 | Brass Fittings | 100 | $8.00 | $800.00
+            003 | Stainless Bolts M8 | 500 | ₹5.00 | ₹2,500.00
+            004 | Brass Fittings | 100 | ₹80.00 | ₹8,000.00
         """.trimIndent()
 
         val page3Text = """
@@ -127,11 +127,11 @@ class PdfProcessingTest {
             PO Number: PO-5544
             
             Item # | Description | Quantity | Unit Cost | Total
-            005 | High Temp Lubricant | 10 | $45.00 | $450.00
+            005 | High Temp Lubricant | 10 | ₹450.00 | ₹4,500.00
             
-            Subtotal: $5000.00
-            Shipping: $150.00
-            Grand Total: $5150.00
+            Subtotal: ₹50,000.00
+            Shipping: ₹1,500.00
+            Grand Total: ₹51,500.00
         """.trimIndent()
 
         val pages = listOf(

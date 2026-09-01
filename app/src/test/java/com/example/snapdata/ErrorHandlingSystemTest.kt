@@ -43,16 +43,18 @@ class ErrorHandlingSystemTest {
     fun testAppLoggerRedactsDocumentContentAndPII() {
         val sensitiveDocument = """
             CONFIDENTIAL TAX RETURN
-            SSN: 000-12-3456
-            Name: John Doe
+            Aadhaar: 5544-2211-9988
+            PAN: ABCDE1234F
+            Name: Aarav Sharma
             Bank Account: 1234-5678-9012-3456
-            Total Income: $150,000.00
+            Total Income: ₹15,00,000.00
         """.trimIndent()
 
         val redacted = AppLogger.redactDocumentText(sensitiveDocument)
 
-        assertFalse("Raw SSN must not be in redacted log", redacted.contains("000-12-3456"))
-        assertFalse("Raw Name must not be in redacted log", redacted.contains("John Doe"))
+        assertFalse("Raw Aadhaar must not be in redacted log", redacted.contains("5544-2211-9988"))
+        assertFalse("Raw PAN must not be in redacted log", redacted.contains("ABCDE1234F"))
+        assertFalse("Raw Name must not be in redacted log", redacted.contains("Aarav Sharma"))
         assertFalse("Raw Bank Account must not be in redacted log", redacted.contains("1234-5678-9012-3456"))
         assertTrue("Redacted text should report character count", redacted.contains("chars"))
         assertTrue("Redacted text should report line count", redacted.contains("lines"))

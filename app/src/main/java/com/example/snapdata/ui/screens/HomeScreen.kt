@@ -97,7 +97,7 @@ fun HomeScreen(viewModel: SnapDataViewModel) {
 
     val userName = viewModel.currentUser?.displayName?.takeIf { it.isNotBlank() }
         ?: viewModel.currentUser?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-        ?: "Robert"
+        ?: "Aarav"
 
     Scaffold(
         containerColor = WarmCreamBackground,

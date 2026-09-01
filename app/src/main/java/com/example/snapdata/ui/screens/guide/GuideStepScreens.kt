@@ -801,12 +801,12 @@ fun GuideScreen07Structured(
             // Field 2
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Customer", color = TextMuted, fontSize = 11.sp)
-                Text("ABC Pvt Ltd", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("Sharma Electronics Pvt Ltd", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
             // Field 3
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Date", color = TextMuted, fontSize = 11.sp)
-                Text("01/05/2024", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("18/04/2026", color = TextWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
             // Field 4
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -835,9 +835,9 @@ fun GuideScreen07Structured(
 
             // Table Rows
             listOf(
-                Triple("Product A", "2", "1500") to "3000",
-                Triple("Product B", "3", "1200") to "3600",
-                Triple("Product C", "2", "1800") to "3600"
+                Triple("LED Display Panel", "1", "6500") to "6500",
+                Triple("Wireless Keyboard", "2", "1200") to "2400",
+                Triple("Power Adapter 65W", "2", "1775") to "3550"
             ).forEach { (left, total) ->
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 2.dp),
@@ -1198,8 +1198,8 @@ fun GuideScreen10History(
         listOf(
             "Invoice_INV-1024.pdf" to "Today, 10:30 AM",
             "Receipt_RCP-889.pdf" to "Yesterday, 04:15 PM",
-            "Statement_May.pdf" to "12 May 2024, 09:20 AM",
-            "Form_Application.pdf" to "10 May 2024, 11:10 AM"
+            "Statement_Aug_SBI.pdf" to "12 Aug 2026, 09:20 AM",
+            "KYC_Form_Aadhaar.pdf" to "10 Aug 2026, 11:10 AM"
         ).forEach { (title, date) ->
             Row(
                 modifier = Modifier

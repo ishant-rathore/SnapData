@@ -31,7 +31,7 @@ class ComposeUiWorkflowTest {
     @Test
     fun testAppScreenNavigationEnumCoverage() {
         val allScreens = AppScreen.values()
-        assertEquals(16, allScreens.size)
+        assertEquals(17, allScreens.size)
         assertTrue(allScreens.contains(AppScreen.SPLASH))
         assertTrue(allScreens.contains(AppScreen.LANDING))
         assertTrue(allScreens.contains(AppScreen.AUTH_WELCOME))
@@ -40,6 +40,7 @@ class ComposeUiWorkflowTest {
         assertTrue(allScreens.contains(AppScreen.FORGOT_PASSWORD))
         assertTrue(allScreens.contains(AppScreen.VERIFY_EMAIL))
         assertTrue(allScreens.contains(AppScreen.AUTH_SUCCESS))
+        assertTrue(allScreens.contains(AppScreen.USER_GUIDE))
         assertTrue(allScreens.contains(AppScreen.HOME))
         assertTrue(allScreens.contains(AppScreen.ACQUISITION))
         assertTrue(allScreens.contains(AppScreen.PREPROCESSING))
@@ -92,14 +93,14 @@ class ComposeUiWorkflowTest {
     fun testExtractedFieldManipulationsAndConfidenceValidation() {
         val field1 = ExtractedField(
             key = "Vendor",
-            value = "Apex Cloud Solutions",
+            value = "Aarohan Digital Solutions",
             confidence = 0.98f,
             category = "Financial",
             confidenceSource = ConfidenceSource.MEASURED
         )
         val field2 = ExtractedField(
             key = "Amount Due",
-            value = "$2,734.20",
+            value = "₹2,97,360.00",
             confidence = 0.55f, // Below 0.70 threshold -> lowConfidenceWarning
             category = "Financial",
             confidenceSource = ConfidenceSource.HEURISTIC
@@ -109,16 +110,16 @@ class ComposeUiWorkflowTest {
         assertTrue(field2.lowConfidenceWarning)
 
         // Mutate field
-        field1.value = "Apex Cloud Solutions Inc."
+        field1.value = "Aarohan Digital Solutions Pvt. Ltd."
         field1.isUserEdited = true
-        assertEquals("Apex Cloud Solutions Inc.", field1.value)
+        assertEquals("Aarohan Digital Solutions Pvt. Ltd.", field1.value)
         assertTrue(field1.isUserEdited)
 
         val fieldsList = mutableListOf(field1, field2)
         assertEquals(2, fieldsList.size)
 
         // Add custom attribute
-        fieldsList.add(ExtractedField(key = "Tax ID", value = "US-94827103-X", category = "Tax"))
+        fieldsList.add(ExtractedField(key = "GSTIN", value = "27ABCDE1234F1Z5", category = "Tax"))
         assertEquals(3, fieldsList.size)
 
         // Delete attribute
@@ -131,8 +132,8 @@ class ComposeUiWorkflowTest {
     fun testExtractedTableMatrixManipulations() {
         val headers = mutableListOf("Description", "Qty", "Unit Price", "Total")
         val rows = mutableListOf(
-            mutableListOf("Cloud Server Tier 3", "1", "$1,250.00", "$1,250.00"),
-            mutableListOf("Dedicated Storage 5TB", "5", "$90.00", "$450.00")
+            mutableListOf("Cloud Server Tier 3", "1", "₹1,25,000.00", "₹1,25,000.00"),
+            mutableListOf("Dedicated Storage 5TB", "5", "₹9,000.00", "₹45,000.00")
         )
         val table = ExtractedTable(
             name = "Line Items",
@@ -154,7 +155,7 @@ class ComposeUiWorkflowTest {
         assertEquals("0%", table.rows[0][4])
 
         // Add row
-        table.rows.add(mutableListOf("Support SLA", "1", "$500.00", "$500.00", "0%"))
+        table.rows.add(mutableListOf("Support SLA", "1", "₹50,000.00", "₹50,000.00", "0%"))
         assertEquals(3, table.rows.size)
 
         // Update cell

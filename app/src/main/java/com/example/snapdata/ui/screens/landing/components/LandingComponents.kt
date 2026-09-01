@@ -459,7 +459,7 @@ fun HeroPhoneMockupWithFloatingCards(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Mini Greeting Card (Hello, Robert)
+                // Mini Greeting Card (Hello, Aarav)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -474,7 +474,7 @@ fun HeroPhoneMockupWithFloatingCards(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Hello, Robert", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SnapDataBlack)
+                            Text("Hello, Aarav", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = SnapDataBlack)
                             Text("Ready to scan documents", fontSize = 9.sp, color = TextSecondary)
                         }
                         Box(
@@ -571,8 +571,8 @@ fun HeroPhoneMockupWithFloatingCards(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text("Recent Activity", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SnapDataBlack)
-                    MiniDocItem("Invoice_0324.pdf", "Commercial Invoice", "$3,850.00")
-                    MiniDocItem("Receipt_Tech.jpg", "Receipt", "$240.00")
+                    MiniDocItem("Invoice_0324.pdf", "Tax Invoice", "₹38,500.00")
+                    MiniDocItem("Receipt_Cafe.jpg", "Cafe Receipt", "₹650.00")
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -613,8 +613,8 @@ fun HeroPhoneMockupWithFloatingCards(
                     .padding(end = 6.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Apex Tech Solutions", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SnapDataBlack)
-                    Text("Total: $3,850.00", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SnapDataRed)
+                    Text("Aarohan Digital Solutions", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SnapDataBlack)
+                    Text("Total: ₹38,500.00", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SnapDataRed)
                 }
             }
 
@@ -1484,12 +1484,12 @@ fun AiIntelligenceSection(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                ExtractedFieldRow("Document Type", "Commercial Invoice")
-                ExtractedFieldRow("Name", "Robert Johnson")
-                ExtractedFieldRow("Date", "21 May 2024")
-                ExtractedFieldRow("Invoice No", "INV-0324")
-                ExtractedFieldRow("Phone", "+49 123 456 7890")
-                ExtractedFieldRow("Total", "$3,850.00", isHighlighted = true)
+                ExtractedFieldRow("Document Type", "GST Tax Invoice")
+                ExtractedFieldRow("Name", "Aarav Sharma")
+                ExtractedFieldRow("Date", "21 August 2026")
+                ExtractedFieldRow("Invoice No", "INV-2026-1042")
+                ExtractedFieldRow("Phone", "+91 98765 43210")
+                ExtractedFieldRow("Total", "₹38,500.00", isHighlighted = true)
             }
         }
     }
@@ -1531,11 +1531,11 @@ fun TableExtractionSection(
     var uiUxQty by remember { mutableStateOf(1) }
     var devQty by remember { mutableStateOf(1) }
 
-    val webDesignTotal = webDesignQty * 1200
-    val uiUxTotal = uiUxQty * 800
-    val devTotal = devQty * 1500
+    val webDesignTotal = webDesignQty * 12000
+    val uiUxTotal = uiUxQty * 8000
+    val devTotal = devQty * 15000
     val subtotal = webDesignTotal + uiUxTotal + devTotal
-    val tax = (subtotal * 0.10f).toInt()
+    val tax = (subtotal * 0.18f).toInt()
     val total = subtotal + tax
 
     Column(
@@ -1628,24 +1628,24 @@ fun TableExtractionSection(
                 InteractiveTableRow(
                     item = "Web Design",
                     qty = webDesignQty,
-                    price = "$1,200",
-                    total = "$$webDesignTotal",
+                    price = "₹12,000",
+                    total = "₹$webDesignTotal",
                     onQtyChange = { if (it in 1..9) webDesignQty = it }
                 )
 
                 InteractiveTableRow(
                     item = "UI/UX Design",
                     qty = uiUxQty,
-                    price = "$800",
-                    total = "$$uiUxTotal",
+                    price = "₹8,000",
+                    total = "₹$uiUxTotal",
                     onQtyChange = { if (it in 1..9) uiUxQty = it }
                 )
 
                 InteractiveTableRow(
                     item = "Development",
                     qty = devQty,
-                    price = "$1,500",
-                    total = "$$devTotal",
+                    price = "₹15,000",
+                    total = "₹$devTotal",
                     onQtyChange = { if (it in 1..9) devQty = it }
                 )
 
@@ -1657,15 +1657,15 @@ fun TableExtractionSection(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("Subtotal", fontSize = 11.sp, color = TextSecondary)
-                    Text("$$subtotal", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = SnapDataBlack)
+                    Text("₹$subtotal", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = SnapDataBlack)
                 }
                 Spacer(modifier = Modifier.height(3.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Tax (10%)", fontSize = 11.sp, color = TextSecondary)
-                    Text("$$tax", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = SnapDataBlack)
+                    Text("GST (18%)", fontSize = 11.sp, color = TextSecondary)
+                    Text("₹$tax", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = SnapDataBlack)
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(
@@ -1678,7 +1678,7 @@ fun TableExtractionSection(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Total", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SnapDataRed)
-                    Text("$$total", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SnapDataRed)
+                    Text("₹$total", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SnapDataRed)
                 }
             }
         }
@@ -1865,10 +1865,10 @@ fun ExportSection(
     var selectedFormatIndex by remember { mutableStateOf(0) }
 
     val formats = listOf(
-        ExportFormatItem("Excel", ".xlsx", "Formatted spreadsheet with column headers and total formulas", "Item\tQty\tPrice\tTotal\nWeb Design\t1\t1200\t1200\nUI/UX\t1\t800\t800\nDev\t1\t1500\t1500\nTotal\t\t\t3850", Icons.Outlined.TableChart),
-        ExportFormatItem("CSV", ".csv", "Comma-separated raw values compatible with any database", "Item,Qty,Price,Total\nWeb Design,1,1200,1200\nUI/UX Design,1,800,800\nDevelopment,1,1500,1500", Icons.Outlined.GridOn),
-        ExportFormatItem("JSON", ".json", "Structured object hierarchy for API integrations", "{\n  \"vendor\": \"Apex Tech Solutions\",\n  \"invoice_no\": \"INV-0324\",\n  \"date\": \"2024-05-21\",\n  \"total\": 3850.00\n}", Icons.Outlined.Code),
-        ExportFormatItem("PDF", ".pdf", "Clean, formatted vector document summary", "Document Summary:\nCommercial Invoice #INV-0324\nVendor: Apex Tech Solutions\nTotal: $3,850.00 USD", Icons.Outlined.PictureAsPdf)
+        ExportFormatItem("Excel", ".xlsx", "Formatted spreadsheet with column headers and total formulas", "Item\tQty\tPrice\tTotal\nWeb Design\t1\t₹12,000\t₹12,000\nUI/UX\t1\t₹8,000\t₹8,000\nDev\t1\t₹15,000\t₹15,000\nGST (18%)\t\t\t₹6,300\nTotal\t\t\t₹41,300", Icons.Outlined.TableChart),
+        ExportFormatItem("CSV", ".csv", "Comma-separated raw values compatible with any database", "Item,Qty,Price,Total\nWeb Design,1,12000,12000\nUI/UX Design,1,8000,8000\nDevelopment,1,15000,15000", Icons.Outlined.GridOn),
+        ExportFormatItem("JSON", ".json", "Structured object hierarchy for API integrations", "{\n  \"vendor\": \"Aarohan Digital Solutions\",\n  \"invoice_no\": \"INV-2026-1042\",\n  \"date\": \"2026-08-28\",\n  \"total\": 41300.00\n}", Icons.Outlined.Code),
+        ExportFormatItem("PDF", ".pdf", "Clean, formatted vector document summary", "Document Summary:\nGST Tax Invoice #INV-2026-1042\nVendor: Aarohan Digital Solutions Pvt. Ltd.\nTotal: ₹41,300.00 INR", Icons.Outlined.PictureAsPdf)
     )
 
     Column(

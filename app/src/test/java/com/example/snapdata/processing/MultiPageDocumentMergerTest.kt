@@ -110,13 +110,13 @@ class MultiPageDocumentMergerTest {
 
     @Test
     fun `single page result is preserved correctly`() {
-        val fields = listOf(makeField("Name", "John Doe"))
+        val fields = listOf(makeField("Name", "Aarav Sharma"))
         val pages = listOf(makePageData(pageIndex = 1, rawText = "Invoice #001", fields = fields))
         val result = MultiPageDocumentMerger.combineMultiPageResults(pages)
         assertTrue("Raw text should contain page content", result.rawText.contains("Invoice #001"))
         assertEquals("Should have 1 field", 1, result.fields.size)
         assertEquals("Name", result.fields[0].key)
-        assertEquals("John Doe", result.fields[0].value)
+        assertEquals("Aarav Sharma", result.fields[0].value)
     }
 
     // ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ class MultiPageDocumentMergerTest {
         val pages = listOf(
             makePageData(
                 pageIndex = 1,
-                tables = listOf(makeTable("Employees", listOf("ID", "Name"), listOf(listOf("1", "Alice"))))
+                tables = listOf(makeTable("Employees", listOf("ID", "Name"), listOf(listOf("1", "Priya Verma"))))
             ),
             makePageData(
                 pageIndex = 2,

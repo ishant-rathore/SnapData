@@ -668,7 +668,7 @@ private fun generateDetectedBlocks(
         ),
         DetectedTextBlock(
             id = "blk_3",
-            text = "TOTAL DUE: $1,416.00",
+            text = "TOTAL DUE: ₹1,41,600.00",
             category = "Amount",
             confidence = 0.99f,
             relativeLeft = 0.30f,

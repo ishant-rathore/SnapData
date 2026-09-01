@@ -177,7 +177,7 @@ fun SignUpScreen(
                     if (authError != null) onClearError()
                 },
                 label = "Full Name",
-                placeholder = "Alex Vance",
+                placeholder = "Aarav Sharma",
                 leadingIcon = Icons.Default.Person,
                 isError = nameError != null,
                 errorMessage = nameError,

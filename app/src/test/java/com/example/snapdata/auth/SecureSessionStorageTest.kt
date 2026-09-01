@@ -21,8 +21,8 @@ class SecureSessionStorageTest {
 
     private fun makeUser(
         id: String = "usr_test123",
-        email: String = "test@example.com",
-        displayName: String? = "Test User",
+        email: String = "aarav.sharma@example.in",
+        displayName: String? = "Aarav Sharma",
         isEmailVerified: Boolean = true,
         isGuest: Boolean = false
     ) = AuthUser(
@@ -137,8 +137,8 @@ class SecureSessionStorageTest {
 
     @Test
     fun `saving a second session overwrites the first`() {
-        val user1 = makeUser(id = "usr_001", email = "first@example.com")
-        val user2 = makeUser(id = "usr_002", email = "second@example.com")
+        val user1 = makeUser(id = "usr_001", email = "aarav@example.in")
+        val user2 = makeUser(id = "usr_002", email = "priya@example.in")
         storage.saveSession(user1, "token1")
         storage.saveSession(user2, "token2")
         val restored = storage.restoreSession()

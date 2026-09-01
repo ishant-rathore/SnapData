@@ -16,7 +16,7 @@ class GeminiAiServiceTest {
         val validAiJson = """
             {
               "documentType": "INVOICE",
-              "summary": "Commercial invoice for industrial hardware parts totaling $2,484.00.",
+              "summary": "Commercial invoice for industrial hardware parts totaling ₹24,840.00.",
               "fields": [
                 {
                   "key": "Invoice Number",
@@ -26,13 +26,13 @@ class GeminiAiServiceTest {
                 },
                 {
                   "key": "Total Amount",
-                  "value": "$2,484.00",
+                  "value": "₹24,840.00",
                   "confidence": 0.98,
                   "category": "Financial"
                 },
                 {
                   "key": "Vendor Name",
-                  "value": "Apex Industrial Supply",
+                  "value": "Sharma Electronics Pvt Ltd",
                   "confidence": 0.97,
                   "category": "Party / Entity"
                 }
@@ -42,13 +42,13 @@ class GeminiAiServiceTest {
                   "name": "Line Items",
                   "headers": ["Item Description", "Qty", "Unit Price", "Total"],
                   "rows": [
-                    ["50mm Steel Bearings", "100", "$15.00", "$1,500.00"],
-                    ["Hydraulic Seals", "20", "$40.00", "$800.00"]
+                    ["50mm Steel Bearings", "100", "₹150.00", "₹15,000.00"],
+                    ["Hydraulic Seals", "20", "₹400.00", "₹8,000.00"]
                   ],
                   "confidence": 0.96
                 }
               ],
-              "rawText": "TAX INVOICE\nInvoice #: INV-2026-9812\nTotal: $2,484.00"
+              "rawText": "TAX INVOICE\nInvoice #: INV-2026-9812\nTotal: ₹24,840.00"
             }
         """.trimIndent()
 
@@ -57,7 +57,7 @@ class GeminiAiServiceTest {
         result!!
 
         assertEquals(DocumentType.INVOICE, result.detectedDocType)
-        assertEquals("Commercial invoice for industrial hardware parts totaling $2,484.00.", result.summary)
+        assertEquals("Commercial invoice for industrial hardware parts totaling ₹24,840.00.", result.summary)
         assertEquals(3, result.fields.size)
         assertEquals("INV-2026-9812", result.fields.first { it.key == "Invoice Number" }.value)
         assertEquals(1, result.tables.size)
@@ -105,7 +105,7 @@ class GeminiAiServiceTest {
               "fields": [
                 {
                   "key": "Recipient",
-                  "value": "Dr. Sarah Connor",
+                  "value": "Dr. Kavya Iyer",
                   "confidence": 0.96
                 }
               ]
@@ -119,7 +119,7 @@ class GeminiAiServiceTest {
         assertEquals(DocumentType.CERTIFICATE, result!!.detectedDocType)
         assertEquals("Certificate of Training Completion", result.summary)
         assertEquals(1, result.fields.size)
-        assertEquals("Dr. Sarah Connor", result.fields[0].value)
+        assertEquals("Dr. Kavya Iyer", result.fields[0].value)
     }
 
     @Test
@@ -128,7 +128,7 @@ class GeminiAiServiceTest {
         val jsonWithCustomEnum = """
             {
               "documentType": "water_utility_bill_scan",
-              "fields": [{"key": "Total", "value": "$45.00"}]
+              "fields": [{"key": "Total", "value": "₹450.00"}]
             }
         """.trimIndent()
 
@@ -209,12 +209,12 @@ class GeminiAiServiceTest {
                 },
                 {
                   "key": "Price",
-                  "value": "$4.00",
+                  "value": "₹40.00",
                   "confidence": -0.5
                 },
                 {
                   "key": "Tax",
-                  "value": "$0.40",
+                  "value": "₹4.00",
                   "confidence": "98%"
                 }
               ]
@@ -243,9 +243,9 @@ class GeminiAiServiceTest {
                   "name": "Transactions",
                   "headers": ["Date", "Description", "Amount", "Balance"],
                   "rows": [
-                    ["2026-08-01", "Deposit", "$1,000.00"],
-                    ["2026-08-02", "Payment", "$200.00", "$800.00", "EXTRA_COL_DATA"],
-                    ["2026-08-03", "Transfer", "$50.00", "$750.00"]
+                    ["2026-08-01", "Deposit", "₹10,000.00"],
+                    ["2026-08-02", "Payment", "₹2,000.00", "₹8,000.00", "EXTRA_COL_DATA"],
+                    ["2026-08-03", "Transfer", "₹500.00", "₹7,500.00"]
                   ],
                   "confidence": "92%"
                 },
@@ -403,7 +403,7 @@ class GeminiAiServiceTest {
             INVOICE
             Invoice No: 12345
             Date: 2026-08-30
-            Total: $500.00
+            Total: ₹5,000.00
         """.trimIndent()
 
         val parsedLocal = OcrEngine.parseTextToStructuredData(sampleText)

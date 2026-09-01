@@ -125,7 +125,7 @@ class DocumentEntityTest {
     fun `fields round-trip through DocumentEntity factory`() {
         val fields = listOf(
             ExtractedField(key = "Invoice Number", value = "INV-001", confidence = 0.98f),
-            ExtractedField(key = "Total", value = "1500.00", confidence = 0.95f)
+            ExtractedField(key = "Total", value = "₹15,000.00", confidence = 0.95f)
         )
         val entity = DocumentEntity.from(
             title = "Test",
@@ -167,8 +167,8 @@ class DocumentEntityTest {
                 name = "Line Items",
                 headers = mutableListOf("Item", "Qty", "Amount"),
                 rows = mutableListOf(
-                    mutableListOf("Widget A", "5", "50.00"),
-                    mutableListOf("Widget B", "3", "30.00")
+                    mutableListOf("Widget A", "5", "₹500.00"),
+                    mutableListOf("Widget B", "3", "₹300.00")
                 ),
                 confidence = 0.90f
             )

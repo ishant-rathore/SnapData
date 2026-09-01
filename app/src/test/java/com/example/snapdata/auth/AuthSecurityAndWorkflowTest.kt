@@ -31,7 +31,7 @@ class AuthSecurityAndWorkflowTest {
     @Test
     fun testAuth001_SuccessfulSignIn() = runBlocking {
         // Register an account first
-        val signUpResult = repository.signUp("Alice Walker", "alice@example.com", "Password123!".toCharArray())
+        val signUpResult = repository.signUp("Aarav Sharma", "aarav@example.in", "Password123!".toCharArray())
         assertTrue("Registration must succeed", signUpResult is AuthResult.Success)
 
         // Sign out
@@ -39,11 +39,11 @@ class AuthSecurityAndWorkflowTest {
         assertEquals(AuthState.Unauthenticated(), repository.authState.value)
 
         // Sign in with matching credentials
-        val signInResult = repository.signIn("alice@example.com", "Password123!".toCharArray())
+        val signInResult = repository.signIn("aarav@example.in", "Password123!".toCharArray())
         assertTrue("Sign in must succeed", signInResult is AuthResult.Success)
         val user = (signInResult as AuthResult.Success).data
-        assertEquals("alice@example.com", user.email)
-        assertEquals("Alice Walker", user.displayName)
+        assertEquals("aarav@example.in", user.email)
+        assertEquals("Aarav Sharma", user.displayName)
         assertFalse(user.isGuest)
 
         val state = repository.authState.value
@@ -52,17 +52,17 @@ class AuthSecurityAndWorkflowTest {
 
     @Test
     fun testAuth002_InvalidCredentials() = runBlocking {
-        repository.signUp("Bob Ross", "bob@example.com", "CorrectPass123!".toCharArray())
+        repository.signUp("Priya Verma", "priya@example.in", "CorrectPass123!".toCharArray())
         repository.signOut()
 
         // Sign in with wrong password
-        val wrongPassResult = repository.signIn("bob@example.com", "WrongPass123!".toCharArray())
+        val wrongPassResult = repository.signIn("priya@example.in", "WrongPass123!".toCharArray())
         assertTrue("Sign in with wrong password must fail", wrongPassResult is AuthResult.Error)
         val err = (wrongPassResult as AuthResult.Error).error
         assertEquals(AppAuthError.InvalidCredentials, err)
 
         // Sign in with non-existent email
-        val nonExistentResult = repository.signIn("ghost@example.com", "AnyPass123!".toCharArray())
+        val nonExistentResult = repository.signIn("ghost@example.in", "AnyPass123!".toCharArray())
         assertTrue("Sign in with non-existent email must fail", nonExistentResult is AuthResult.Error)
     }
 
@@ -87,7 +87,7 @@ class AuthSecurityAndWorkflowTest {
     @Test
     fun testAuth005_EmptyAndWeakPasswordValidation() = runBlocking {
         // Empty password
-        val emptyPassResult = repository.signIn("user@example.com", "".toCharArray())
+        val emptyPassResult = repository.signIn("user@example.in", "".toCharArray())
         assertTrue(emptyPassResult is AuthResult.Error)
         assertEquals(AppAuthError.EmptyPassword, (emptyPassResult as AuthResult.Error).error)
 
@@ -99,7 +99,7 @@ class AuthSecurityAndWorkflowTest {
         assertFalse(ProductionAuthProvider.isStrongPassword("NoSpecial1234".toCharArray())) // No special char
         assertTrue(ProductionAuthProvider.isStrongPassword("ValidP@ssw0rd".toCharArray())) // Strong
 
-        val weakSignUpResult = repository.signUp("Name", "user@example.com", "weak".toCharArray())
+        val weakSignUpResult = repository.signUp("Name", "user@example.in", "weak".toCharArray())
         assertTrue(weakSignUpResult is AuthResult.Error)
         assertEquals(AppAuthError.WeakPassword, (weakSignUpResult as AuthResult.Error).error)
     }
@@ -113,17 +113,17 @@ class AuthSecurityAndWorkflowTest {
 
     @Test
     fun testAuth007_SuccessfulRegistrationAndPBKDF2Hashing() = runBlocking {
-        val result = repository.signUp("Charles", "charles@example.com", "StrongSecret#99".toCharArray())
+        val result = repository.signUp("Rahul Mehta", "rahul@example.in", "StrongSecret#99".toCharArray())
         assertTrue(result is AuthResult.Success)
         val user = (result as AuthResult.Success).data
-        assertEquals("charles@example.com", user.email)
+        assertEquals("rahul@example.in", user.email)
         assertFalse(user.isGuest)
         assertNotNull(user.id)
     }
 
     @Test
     fun testAuth008_EmailVerificationLifecycle() = runBlocking {
-        repository.signUp("Dana", "dana@example.com", "DanaSecret!99".toCharArray())
+        repository.signUp("Ananya Singh", "ananya@example.in", "DanaSecret!99".toCharArray())
         val userBefore = repository.currentUser
         assertNotNull(userBefore)
         assertFalse("Should be unverified initially", userBefore!!.isEmailVerified)
@@ -139,7 +139,7 @@ class AuthSecurityAndWorkflowTest {
 
     @Test
     fun testAuth009_VerificationResendCooldown() = runBlocking {
-        repository.signUp("Evan", "evan@example.com", "EvanSecret!99".toCharArray())
+        repository.signUp("Rohan Gupta", "rohan@example.in", "EvanSecret!99".toCharArray())
 
         // First send was triggered on signup, immediate resend should hit cooldown
         val resendResult = repository.sendEmailVerification()
@@ -150,18 +150,18 @@ class AuthSecurityAndWorkflowTest {
     @Test
     fun testAuth010_ForgotPasswordAntiEnumeration() = runBlocking {
         // Exists
-        repository.signUp("Fiona", "fiona@example.com", "FionaSecret!99".toCharArray())
-        val resultExists = repository.sendPasswordReset("fiona@example.com")
+        repository.signUp("Neha Patel", "neha@example.in", "FionaSecret!99".toCharArray())
+        val resultExists = repository.sendPasswordReset("neha@example.in")
         assertTrue(resultExists is AuthResult.Success)
 
         // Does NOT exist -> Still returns Success to prevent account enumeration
-        val resultNonExistent = repository.sendPasswordReset("unknown@example.com")
+        val resultNonExistent = repository.sendPasswordReset("unknown@example.in")
         assertTrue("Must return generic success to avoid enumeration", resultNonExistent is AuthResult.Success)
     }
 
     @Test
     fun testAuth011_SessionRestorationOnStartup() = runBlocking {
-        repository.signUp("George", "george@example.com", "GeorgePass123!".toCharArray())
+        repository.signUp("Vikram Rathore", "vikram@example.in", "GeorgePass123!".toCharArray())
         val user = repository.currentUser
         assertNotNull(user)
 
@@ -173,13 +173,13 @@ class AuthSecurityAndWorkflowTest {
         assertTrue(restoreResult is AuthResult.Success)
         val restoredUser = (restoreResult as AuthResult.Success).data
         assertNotNull(restoredUser)
-        assertEquals("george@example.com", restoredUser?.email)
+        assertEquals("vikram@example.in", restoredUser?.email)
         assertEquals(user?.id, restoredUser?.id)
     }
 
     @Test
     fun testAuth012_SessionExpirationAndClear() = runBlocking {
-        repository.signUp("Hannah", "hannah@example.com", "HannahPass123!".toCharArray())
+        repository.signUp("Kavya Iyer", "kavya@example.in", "HannahPass123!".toCharArray())
         assertNotNull(repository.currentUser)
 
         storage.clearSession()
@@ -189,7 +189,7 @@ class AuthSecurityAndWorkflowTest {
 
     @Test
     fun testAuth013_SignOutClearsSessionWithoutAffectingLocalData() = runBlocking {
-        repository.signUp("Ian", "ian@example.com", "IanPass123!".toCharArray())
+        repository.signUp("Siddharth Joshi", "siddharth@example.in", "IanPass123!".toCharArray())
         assertTrue(repository.authState.value is AuthState.Authenticated)
 
         val signOutResult = repository.signOut()
@@ -203,32 +203,32 @@ class AuthSecurityAndWorkflowTest {
     fun testAuth014_NetworkUnavailableSimulation() = runBlocking {
         repository.setNetworkAvailable(false)
 
-        val signInResult = repository.signIn("user@example.com", "Password123!".toCharArray())
+        val signInResult = repository.signIn("user@example.in", "Password123!".toCharArray())
         assertTrue(signInResult is AuthResult.Error)
         assertEquals(AppAuthError.NetworkUnavailable, (signInResult as AuthResult.Error).error)
 
-        val resetResult = repository.sendPasswordReset("user@example.com")
+        val resetResult = repository.sendPasswordReset("user@example.in")
         assertTrue(resetResult is AuthResult.Error)
         assertEquals(AppAuthError.NetworkUnavailable, (resetResult as AuthResult.Error).error)
 
         // Restore network
         repository.setNetworkAvailable(true)
-        val resetSuccess = repository.sendPasswordReset("user@example.com")
+        val resetSuccess = repository.sendPasswordReset("user@example.in")
         assertTrue(resetSuccess is AuthResult.Success)
     }
 
     @Test
     fun testAuth015_RateLimitingAntiBruteForce() = runBlocking {
-        repository.signUp("Jack", "jack@example.com", "CorrectPass123!".toCharArray())
+        repository.signUp("Meera Nair", "meera@example.in", "CorrectPass123!".toCharArray())
         repository.signOut()
 
         // 5 consecutive failed sign-in attempts
         for (i in 1..5) {
-            repository.signIn("jack@example.com", "WrongPass123!".toCharArray())
+            repository.signIn("meera@example.in", "WrongPass123!".toCharArray())
         }
 
         // 6th attempt should be rate-limited
-        val rateLimitedResult = repository.signIn("jack@example.com", "WrongPass123!".toCharArray())
+        val rateLimitedResult = repository.signIn("meera@example.in", "WrongPass123!".toCharArray())
         assertTrue("Attempt after 5 failures must be rate limited", rateLimitedResult is AuthResult.Error)
         assertEquals(AppAuthError.TooManyAttempts, (rateLimitedResult as AuthResult.Error).error)
     }

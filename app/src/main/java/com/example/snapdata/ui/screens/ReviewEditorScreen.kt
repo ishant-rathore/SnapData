@@ -564,19 +564,19 @@ private fun ReviewOverviewTab(
 
                     OverviewDetailRow(
                         label = "Vendor Name",
-                        value = vendorField?.value ?: "TechNova Global Solutions Ltd"
+                        value = vendorField?.value ?: "Aarohan Digital Solutions Pvt. Ltd."
                     )
                     OverviewDetailRow(
                         label = "Address",
-                        value = addressField?.value ?: "742 Evergreen Terrace, Suite 100"
+                        value = addressField?.value ?: "Office No. 402, Tech Plaza, Andheri East, Mumbai, Maharashtra 400069"
                     )
                     OverviewDetailRow(
                         label = "Email",
-                        value = emailField?.value ?: "billing@technova.io"
+                        value = emailField?.value ?: "billing@aarohandigital.in"
                     )
                     OverviewDetailRow(
                         label = "Phone",
-                        value = phoneField?.value ?: "+1 (555) 234-5678"
+                        value = phoneField?.value ?: "+91 98765 43210"
                     )
                 }
             }
@@ -624,16 +624,16 @@ private fun ReviewOverviewTab(
                     )
                     OverviewDetailRow(
                         label = "Subtotal",
-                        value = subtotalField?.value ?: "$1,200.00"
+                        value = subtotalField?.value ?: "₹1,20,000.00"
                     )
                     OverviewDetailRow(
-                        label = "Tax / VAT",
-                        value = taxField?.value ?: "$216.00"
+                        label = "GST (18%)",
+                        value = taxField?.value ?: "₹21,600.00"
                     )
                     Divider(color = SubtleBorder)
                     OverviewDetailRow(
                         label = "Total Amount",
-                        value = totalField?.value ?: "$1,416.00",
+                        value = totalField?.value ?: "₹1,41,600.00",
                         isHighlight = true
                     )
                 }

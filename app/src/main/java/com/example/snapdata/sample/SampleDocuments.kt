@@ -99,47 +99,49 @@ object SampleDocumentRepository {
     val samples: List<SampleDocument> = listOf(
         SampleDocument(
             id = "sample_invoice_01",
-            title = "Apex Tech Cloud Services Invoice",
+            title = "Aarohan Digital Cloud Services Invoice",
             type = DocumentType.INVOICE,
-            description = "Commercial SaaS & hosting monthly invoice with itemized line items and tax calculation.",
+            description = "Commercial SaaS & hosting monthly invoice with itemized line items and GST calculation.",
             rawText = """
-                APEX CLOUD SOLUTIONS INC.
-                100 Innovation Boulevard, Suite 400, San Jose, CA
-                Tax ID: US-94827103-X
+                AAROHAN DIGITAL SOLUTIONS PVT. LTD.
+                Office No. 402, Tech Plaza, Andheri East, Mumbai, Maharashtra 400069
+                GSTIN: 27ABCDE1234F1Z5
                 
                 TAX INVOICE
-                Invoice Number: INV-2026-8842
-                Invoice Date: August 28, 2026
-                Due Date: September 15, 2026
+                Invoice Number: INV-2026-1042
+                Invoice Date: 28 August 2026
+                Due Date: 15 September 2026
                 Payment Terms: Net 30
                 
                 BILL TO:
-                Horizon Financial Technologies
-                88 Wall Street, 12th Floor, New York, NY
-                Contact: billing@horizonfintech.com
+                Shree Technologies Pvt. Ltd.
+                Tech Park, Shivajinagar, Pune, Maharashtra 411001
+                Contact: accounts@shreetech.in
                 
                 Item Description | Qty | Unit Price | Total
-                Enterprise Kubernetes Cluster Tier 3 | 1 | $1,250.00 | $1,250.00
-                Dedicated SSD Storage (5TB NVMe) | 5 | $90.00 | $450.00
-                Global CDN Bandwidth Package (50TB) | 1 | $320.00 | $320.00
-                24/7 Dedicated SRE Support SLA | 1 | $500.00 | $500.00
+                Enterprise Cloud Cluster Tier 3 | 1 | ₹1,25,000.00 | ₹1,25,000.00
+                Dedicated NVMe SSD Storage (5TB) | 5 | ₹9,000.00 | ₹45,000.00
+                High-Speed CDN Bandwidth (50TB) | 1 | ₹32,000.00 | ₹32,000.00
+                24/7 Dedicated SRE Support SLA | 1 | ₹50,000.00 | ₹50,000.00
                 
-                Subtotal: $2,520.00
-                State Sales Tax (8.5%): $214.20
-                TOTAL DUE: $2,734.20
+                Subtotal: ₹2,52,000.00
+                CGST (9%): ₹22,680.00
+                SGST (9%): ₹22,680.00
+                TOTAL DUE: ₹2,97,360.00
                 Payment Status: PENDING
-                Bank Transfer: Chase Bank AC# 98234-1102
+                Bank Transfer: HDFC Bank AC# 50100492819234 (IFSC: HDFC0000128)
             """.trimIndent(),
             fields = listOf(
-                ExtractedField(key = "Invoice Number", value = "INV-2026-8842", confidence = 0.99f, category = "Identifier"),
-                ExtractedField(key = "Invoice Date", value = "August 28, 2026", confidence = 0.98f, category = "Temporal"),
-                ExtractedField(key = "Due Date", value = "September 15, 2026", confidence = 0.97f, category = "Temporal"),
-                ExtractedField(key = "Vendor Name", value = "Apex Cloud Solutions Inc.", confidence = 0.99f, category = "Party / Entity"),
-                ExtractedField(key = "Client Name", value = "Horizon Financial Technologies", confidence = 0.98f, category = "Party / Entity"),
-                ExtractedField(key = "Subtotal", value = "$2,520.00", confidence = 0.96f, category = "Financial"),
-                ExtractedField(key = "Tax Rate", value = "8.5%", confidence = 0.94f, category = "Financial"),
-                ExtractedField(key = "Tax Amount", value = "$214.20", confidence = 0.95f, category = "Financial"),
-                ExtractedField(key = "Total Due", value = "$2,734.20", confidence = 0.99f, category = "Financial"),
+                ExtractedField(key = "Invoice Number", value = "INV-2026-1042", confidence = 0.99f, category = "Identifier"),
+                ExtractedField(key = "Invoice Date", value = "28 August 2026", confidence = 0.98f, category = "Temporal"),
+                ExtractedField(key = "Due Date", value = "15 September 2026", confidence = 0.97f, category = "Temporal"),
+                ExtractedField(key = "Vendor Name", value = "Aarohan Digital Solutions Pvt. Ltd.", confidence = 0.99f, category = "Party / Entity"),
+                ExtractedField(key = "Client Name", value = "Shree Technologies Pvt. Ltd.", confidence = 0.98f, category = "Party / Entity"),
+                ExtractedField(key = "GSTIN", value = "27ABCDE1234F1Z5", confidence = 0.98f, category = "Tax"),
+                ExtractedField(key = "Subtotal", value = "₹2,52,000.00", confidence = 0.96f, category = "Financial"),
+                ExtractedField(key = "CGST (9%)", value = "₹22,680.00", confidence = 0.95f, category = "Financial"),
+                ExtractedField(key = "SGST (9%)", value = "₹22,680.00", confidence = 0.95f, category = "Financial"),
+                ExtractedField(key = "Total Due", value = "₹2,97,360.00", confidence = 0.99f, category = "Financial"),
                 ExtractedField(key = "Payment Status", value = "PENDING", confidence = 0.95f, category = "Status")
             ),
             tables = listOf(
@@ -147,83 +149,86 @@ object SampleDocumentRepository {
                     name = "Line Items & Services",
                     headers = mutableListOf("Item Description", "Qty", "Unit Price", "Total"),
                     rows = mutableListOf(
-                        mutableListOf("Enterprise Kubernetes Cluster Tier 3", "1", "$1,250.00", "$1,250.00"),
-                        mutableListOf("Dedicated SSD Storage (5TB NVMe)", "5", "$90.00", "$450.00"),
-                        mutableListOf("Global CDN Bandwidth Package (50TB)", "1", "$320.00", "$320.00"),
-                        mutableListOf("24/7 Dedicated SRE Support SLA", "1", "$500.00", "$500.00")
+                        mutableListOf("Enterprise Cloud Cluster Tier 3", "1", "₹1,25,000.00", "₹1,25,000.00"),
+                        mutableListOf("Dedicated NVMe SSD Storage (5TB)", "5", "₹9,000.00", "₹45,000.00"),
+                        mutableListOf("High-Speed CDN Bandwidth (50TB)", "1", "₹32,000.00", "₹32,000.00"),
+                        mutableListOf("24/7 Dedicated SRE Support SLA", "1", "₹50,000.00", "₹50,000.00")
                     ),
                     confidence = 0.96f
                 )
             ),
-            summary = "Invoice INV-2026-8842 issued by Apex Cloud Solutions Inc. to Horizon Financial Technologies for $2,734.20 due on Sep 15, 2026."
+            summary = "Invoice INV-2026-1042 issued by Aarohan Digital Solutions Pvt. Ltd. to Shree Technologies Pvt. Ltd. for ₹2,97,360.00 due on 15 Sep 2026."
         ),
         SampleDocument(
             id = "sample_receipt_02",
-            title = "Blue Bottle Artisan Cafe Receipt",
+            title = "BrewBean Café POS Thermal Receipt",
             type = DocumentType.RECEIPT,
-            description = "Point of sale thermal store receipt with items, tips, payment method and auth code.",
+            description = "Point of sale thermal cafe receipt with items, GST breakdown, and UPI payment details.",
             rawText = """
-                BLUE BOTTLE COFFEE ROASTERS
-                315 Linden St, San Francisco, CA 94102
-                Tel: (415) 555-0199
+                BREWBEAN CAFÉ
+                Shop No. 4, Hill Road, Bandra West, Mumbai, Maharashtra 400050
+                Tel: +91 98765 43210
+                GSTIN: 27AABCU9603R1ZM
                 
-                RECEIPT #77291
-                Date: 2026-08-30 09:14 AM
-                Server: Alex M.   •   Station: POS-02
+                TAX INVOICE / RECEIPT #77291
+                Date: 30/08/2026 09:14 AM
+                Server: Rohan M.   •   Station: POS-02
                 
                 Item | Qty | Price
-                Single Origin Pour Over (Bella Donovan) | 1 | $6.50
-                Oat Milk Gibraltar Cappuccino | 2 | $11.00
-                Avocado Tartine with Microgreens | 1 | $12.50
-                Almond Croissant | 1 | $4.75
+                Special Masala Chai | 2 | ₹120.00
+                Cold Coffee with Ice Cream | 2 | ₹340.00
+                Paneer Tikka Grilled Sandwich | 1 | ₹180.00
+                Butter Croissant | 1 | ₹110.00
                 
-                Subtotal: $34.75
-                SF City Mandate (4%): $1.39
-                Sales Tax (8.625%): $3.00
-                Tip (18%): $6.26
-                TOTAL AMOUNT: $45.40
+                Subtotal: ₹750.00
+                CGST (2.5%): ₹18.75
+                SGST (2.5%): ₹18.75
+                TOTAL AMOUNT: ₹787.50
                 
-                Payment: Apple Pay (Mastercard ending in 4092)
-                Approval Code: AUTH-881920
+                Payment Method: UPI (GPay / aarav@okhdfcbank)
+                UPI Ref No: 62410881920
                 THANK YOU FOR YOUR VISIT!
             """.trimIndent(),
             fields = listOf(
-                ExtractedField(key = "Merchant", value = "Blue Bottle Coffee Roasters", confidence = 0.99f, category = "Party / Entity"),
+                ExtractedField(key = "Merchant", value = "BrewBean Café", confidence = 0.99f, category = "Party / Entity"),
                 ExtractedField(key = "Receipt Number", value = "#77291", confidence = 0.97f, category = "Identifier"),
-                ExtractedField(key = "Date & Time", value = "2026-08-30 09:14 AM", confidence = 0.98f, category = "Temporal"),
-                ExtractedField(key = "Subtotal", value = "$34.75", confidence = 0.96f, category = "Financial"),
-                ExtractedField(key = "Tip", value = "$6.26", confidence = 0.93f, category = "Financial"),
-                ExtractedField(key = "Total Amount", value = "$45.40", confidence = 0.99f, category = "Financial"),
-                ExtractedField(key = "Payment Method", value = "Apple Pay (Mastercard *4092)", confidence = 0.95f, category = "Financial")
+                ExtractedField(key = "Date & Time", value = "30/08/2026 09:14 AM", confidence = 0.98f, category = "Temporal"),
+                ExtractedField(key = "GSTIN", value = "27AABCU9603R1ZM", confidence = 0.97f, category = "Tax"),
+                ExtractedField(key = "Subtotal", value = "₹750.00", confidence = 0.96f, category = "Financial"),
+                ExtractedField(key = "CGST", value = "₹18.75", confidence = 0.94f, category = "Financial"),
+                ExtractedField(key = "SGST", value = "₹18.75", confidence = 0.94f, category = "Financial"),
+                ExtractedField(key = "Total Amount", value = "₹787.50", confidence = 0.99f, category = "Financial"),
+                ExtractedField(key = "Payment Method", value = "UPI (GPay / aarav@okhdfcbank)", confidence = 0.95f, category = "Financial")
             ),
             tables = listOf(
                 ExtractedTable(
                     name = "Purchased Items",
                     headers = mutableListOf("Item", "Qty", "Price"),
                     rows = mutableListOf(
-                        mutableListOf("Single Origin Pour Over", "1", "$6.50"),
-                        mutableListOf("Oat Milk Gibraltar Cappuccino", "2", "$11.00"),
-                        mutableListOf("Avocado Tartine with Microgreens", "1", "$12.50"),
-                        mutableListOf("Almond Croissant", "1", "$4.75")
+                        mutableListOf("Special Masala Chai", "2", "₹120.00"),
+                        mutableListOf("Cold Coffee with Ice Cream", "2", "₹340.00"),
+                        mutableListOf("Paneer Tikka Grilled Sandwich", "1", "₹180.00"),
+                        mutableListOf("Butter Croissant", "1", "₹110.00")
                     ),
                     confidence = 0.95f
                 )
             ),
-            summary = "Store receipt #77291 from Blue Bottle Coffee Roasters totalling $45.40 paid via Apple Pay on Aug 30, 2026."
+            summary = "Store receipt #77291 from BrewBean Café totalling ₹787.50 paid via UPI on 30 Aug 2026."
         ),
         SampleDocument(
             id = "sample_marksheet_03",
-            title = "University Semester Academic Marksheet",
+            title = "Pillai College of Engineering Academic Marksheet",
             type = DocumentType.MARK_SHEET,
             description = "Higher education academic transcript with semester grades, credits, SGPA, and classification.",
             rawText = """
-                PACIFIC INSTITUTE OF TECHNOLOGY
+                PILLAI COLLEGE OF ENGINEERING
+                Dr. K. M. Vasudevan Pillai Campus, New Panvel, Navi Mumbai, Maharashtra 410206
                 OFFICIAL TRANSCRIPT OF ACADEMIC RECORD
                 
-                Student Name: Ishant Rathore
-                Enrollment ID: PIT-2024-CS-0412
+                Student Name: Aarav Sharma
+                Enrollment / PRN: PCE-2024-CS-0412
                 Program: Bachelor of Technology (Computer Science & AI)
-                Semester: VI (Spring 2026)
+                Semester: Semester VI (Even Semester 2026)
                 Examination Roll No: 8840192
                 
                 Course Code | Course Title | Credits | Grade | Grade Points
@@ -239,13 +244,13 @@ object SampleDocumentRepository {
                 Semester Grade Point Average (SGPA): 9.60 / 10.00
                 Cumulative Grade Point Average (CGPA): 9.45 / 10.00
                 Result: PASSED WITH FIRST CLASS DISTINCTION
-                Date of Issue: July 20, 2026
+                Date of Issue: 20 July 2026
             """.trimIndent(),
             fields = listOf(
-                ExtractedField(key = "Student Name", value = "Ishant Rathore", confidence = 0.99f, category = "Party / Entity"),
-                ExtractedField(key = "Enrollment ID", value = "PIT-2024-CS-0412", confidence = 0.98f, category = "Identifier"),
+                ExtractedField(key = "Student Name", value = "Aarav Sharma", confidence = 0.99f, category = "Party / Entity"),
+                ExtractedField(key = "Enrollment ID", value = "PCE-2024-CS-0412", confidence = 0.98f, category = "Identifier"),
                 ExtractedField(key = "Program", value = "B.Tech Computer Science & AI", confidence = 0.97f, category = "General"),
-                ExtractedField(key = "Semester", value = "Semester VI (Spring 2026)", confidence = 0.96f, category = "Temporal"),
+                ExtractedField(key = "Semester", value = "Semester VI (Even Semester 2026)", confidence = 0.96f, category = "Temporal"),
                 ExtractedField(key = "Total Credits", value = "20.0", confidence = 0.95f, category = "Academic"),
                 ExtractedField(key = "SGPA", value = "9.60 / 10.00", confidence = 0.99f, category = "Academic"),
                 ExtractedField(key = "CGPA", value = "9.45 / 10.00", confidence = 0.98f, category = "Academic"),
@@ -266,59 +271,60 @@ object SampleDocumentRepository {
                     confidence = 0.97f
                 )
             ),
-            summary = "Official university transcript for Ishant Rathore (Enrollment: PIT-2024-CS-0412) with SGPA 9.60 and First Class Distinction."
+            summary = "Official university transcript for Aarav Sharma (PRN: PCE-2024-CS-0412) with SGPA 9.60 and First Class Distinction."
         ),
         SampleDocument(
             id = "sample_statement_04",
-            title = "Metro National Bank Monthly Statement",
+            title = "State Bank of India Monthly Statement",
             type = DocumentType.BANK_STATEMENT,
-            description = "Checking account statement showing opening/closing balances and transaction ledger.",
+            description = "Current account statement showing opening/closing balances and UPI/NEFT transaction ledger.",
             rawText = """
-                METRO NATIONAL BANK
-                Account Statement - Premier Business Checking
+                STATE BANK OF INDIA
+                Account Statement - Corporate Current Account
                 
-                Account Holder: Quantum Labs LLC
-                Account Number: *******-4491
-                Statement Period: August 01, 2026 - August 31, 2026
-                Branch: 500 Financial Center, Seattle, WA
+                Account Holder: Bharat Tech Ventures Pvt. Ltd.
+                Account Number: XXXXXXXX4491
+                IFSC: SBIN0001234
+                Statement Period: 01 August 2026 - 31 August 2026
+                Branch: Andheri East Branch, Mumbai, Maharashtra 400069
                 
-                Opening Balance: $14,250.00
-                Total Deposits (Credits): $18,400.00
-                Total Withdrawals (Debits): -$9,620.50
-                Closing Balance: $23,029.50
+                Opening Balance: ₹1,42,500.00
+                Total Deposits (Credits): ₹1,84,000.00
+                Total Withdrawals (Debits): -₹96,205.00
+                Closing Balance: ₹2,30,295.00
                 
                 Date | Description | Type | Amount | Balance
-                08/03/2026 | Wire Transfer from Client Acme | Deposit | +$8,500.00 | $22,750.00
-                08/07/2026 | AWS Cloud Hosting Infrastructure | Debit | -$1,240.50 | $21,509.50
-                08/15/2026 | Stripe Payout Merchant Settlement | Deposit | +$9,900.00 | $31,409.50
-                08/22/2026 | Commercial Office Lease Payment | Debit | -$5,500.00 | $25,909.50
-                08/29/2026 | Payroll Direct Deposit Batch | Debit | -$2,880.00 | $23,029.50
+                03/08/2026 | NEFT Inward - Client Settlement | Deposit | +₹85,000.00 | ₹2,27,500.00
+                07/08/2026 | Cloud Infrastructure Hosting | Debit | -₹12,405.00 | ₹2,15,095.00
+                15/08/2026 | UPI Settlement - Razorpay Payout | Deposit | +₹99,000.00 | ₹3,14,095.00
+                22/08/2026 | Commercial Office Lease Payment | Debit | -₹55,000.00 | ₹2,59,095.00
+                29/08/2026 | IMPS Payroll Salary Transfer | Debit | -₹28,800.00 | ₹2,30,295.00
             """.trimIndent(),
             fields = listOf(
-                ExtractedField(key = "Bank Name", value = "Metro National Bank", confidence = 0.99f, category = "Party / Entity"),
-                ExtractedField(key = "Account Holder", value = "Quantum Labs LLC", confidence = 0.98f, category = "Party / Entity"),
-                ExtractedField(key = "Account Number", value = "*******-4491", confidence = 0.97f, category = "Identifier"),
-                ExtractedField(key = "Period", value = "Aug 01, 2026 - Aug 31, 2026", confidence = 0.96f, category = "Temporal"),
-                ExtractedField(key = "Opening Balance", value = "$14,250.00", confidence = 0.98f, category = "Financial"),
-                ExtractedField(key = "Total Deposits", value = "$18,400.00", confidence = 0.97f, category = "Financial"),
-                ExtractedField(key = "Total Withdrawals", value = "-$9,620.50", confidence = 0.97f, category = "Financial"),
-                ExtractedField(key = "Closing Balance", value = "$23,029.50", confidence = 0.99f, category = "Financial")
+                ExtractedField(key = "Bank Name", value = "State Bank of India", confidence = 0.99f, category = "Party / Entity"),
+                ExtractedField(key = "Account Holder", value = "Bharat Tech Ventures Pvt. Ltd.", confidence = 0.98f, category = "Party / Entity"),
+                ExtractedField(key = "Account Number", value = "XXXXXXXX4491", confidence = 0.97f, category = "Identifier"),
+                ExtractedField(key = "Period", value = "01 Aug 2026 - 31 Aug 2026", confidence = 0.96f, category = "Temporal"),
+                ExtractedField(key = "Opening Balance", value = "₹1,42,500.00", confidence = 0.98f, category = "Financial"),
+                ExtractedField(key = "Total Deposits", value = "₹1,84,000.00", confidence = 0.97f, category = "Financial"),
+                ExtractedField(key = "Total Withdrawals", value = "-₹96,205.00", confidence = 0.97f, category = "Financial"),
+                ExtractedField(key = "Closing Balance", value = "₹2,30,295.00", confidence = 0.99f, category = "Financial")
             ),
             tables = listOf(
                 ExtractedTable(
                     name = "Account Transaction History",
                     headers = mutableListOf("Date", "Description", "Type", "Amount", "Balance"),
                     rows = mutableListOf(
-                        mutableListOf("08/03/2026", "Wire Transfer Client Acme", "Deposit", "+$8,500.00", "$22,750.00"),
-                        mutableListOf("08/07/2026", "AWS Infrastructure", "Debit", "-$1,240.50", "$21,509.50"),
-                        mutableListOf("08/15/2026", "Stripe Merchant Settlement", "Deposit", "+$9,900.00", "$31,409.50"),
-                        mutableListOf("08/22/2026", "Commercial Office Lease", "Debit", "-$5,500.00", "$25,909.50"),
-                        mutableListOf("08/29/2026", "Payroll Direct Deposit", "Debit", "-$2,880.00", "$23,029.50")
+                        mutableListOf("03/08/2026", "NEFT Client Settlement", "Deposit", "+₹85,000.00", "₹2,27,500.00"),
+                        mutableListOf("07/08/2026", "Cloud Infrastructure Hosting", "Debit", "-₹12,405.00", "₹2,15,095.00"),
+                        mutableListOf("15/08/2026", "UPI Razorpay Payout", "Deposit", "+₹99,000.00", "₹3,14,095.00"),
+                        mutableListOf("22/08/2026", "Commercial Office Lease", "Debit", "-₹55,000.00", "₹2,59,095.00"),
+                        mutableListOf("29/08/2026", "IMPS Payroll Salary Transfer", "Debit", "-₹28,800.00", "₹2,30,295.00")
                     ),
                     confidence = 0.96f
                 )
             ),
-            summary = "Metro National Bank statement for Quantum Labs LLC (*4491) closing with $23,029.50 balance for August 2026."
+            summary = "State Bank of India statement for Bharat Tech Ventures Pvt. Ltd. (*4491) closing with ₹2,30,295.00 balance for August 2026."
         )
     )
 }

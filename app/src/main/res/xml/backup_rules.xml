@@ -3,4 +3,5 @@
     <exclude domain="database" />
     <exclude domain="file" />
     <exclude domain="root" />
+    <exclude domain="sharedpref" />
 </full-backup-content>

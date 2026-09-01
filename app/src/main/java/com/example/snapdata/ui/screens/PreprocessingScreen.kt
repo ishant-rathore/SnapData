@@ -546,7 +546,7 @@ private fun PrivacyEngineCard(
 
             OptionSwitchRow(
                 title = "PII Redaction Engine",
-                subtitle = "Masks SSN, credit cards & phone numbers",
+                subtitle = "Masks Aadhaar, PAN, cards & phone numbers",
                 checked = options.enablePiiRedaction,
                 onCheckedChange = { onOptionsChange(options.copy(enablePiiRedaction = it)) }
             )

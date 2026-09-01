@@ -54,10 +54,13 @@ data class GeminiRequest(
 )
 
 enum class ExecutionEngine(val displayName: String, val isCloud: Boolean) {
+    ON_DEVICE_LOCAL_AI("On-Device Local AI", false),
     ON_DEVICE_LOCAL("On-Device ML Kit OCR", false),
+    LOCAL_OCR_ONLY("On-Device ML Kit OCR (Heuristic)", false),
     GEMINI_CLOUD_AI("Gemini 3.5 Flash Multimodal", true),
     ENTERPRISE_BACKEND_PROXY("Enterprise Backend Proxy", true)
 }
+
 
 sealed class AiProcessingError(val message: String, val userFriendlyReason: String) {
     data object ApiKeyMissing : AiProcessingError(

@@ -22,12 +22,19 @@ import com.example.snapdata.sample.SampleDocument
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.example.snapdata.ai.engine.OfflineAiEngine
+import com.example.snapdata.ai.engine.OnDeviceNeuralDocumentAnalyzer
+import com.example.snapdata.ai.model.ModelDownloadProgress
+import com.example.snapdata.ai.model.ModelMetadata
+import com.example.snapdata.ai.model.ModelStatus
+import com.example.snapdata.ai.model.OnDeviceModelManager
 import com.example.snapdata.auth.data.AuthRepository
 import com.example.snapdata.auth.data.SecureSessionStorage
 import com.example.snapdata.auth.domain.*
 import com.example.snapdata.ui.screens.guide.UserGuidePreferences
 import java.io.File
 import java.io.FileOutputStream
+
 
 enum class AppScreen {
     SPLASH,
@@ -146,11 +153,19 @@ class SnapDataViewModel(
     }
 
     private val repository = DocumentRepository(application)
+    val modelManager = OnDeviceModelManager.getInstance(application)
+
+    val modelStatus: StateFlow<ModelStatus> = modelManager.status
+    val modelProgress: StateFlow<ModelDownloadProgress> = modelManager.progress
+    val modelLastVerified: StateFlow<Long> = modelManager.lastVerifiedTimestamp
+    val modelMetadata: ModelMetadata get() = modelManager.metadata
+    val isOfflineAiReady: Boolean get() = modelManager.status.value.isReady
 
     val authState: StateFlow<AuthState> = authRepository.authState
     val currentUser: AuthUser? get() = authRepository.currentUser
     val isLoggedIn: Boolean get() = currentUser != null
     val isFirebaseConfigured: Boolean get() = authRepository.isFirebaseConfigured
+
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
@@ -694,7 +709,7 @@ class SnapDataViewModel(
                                 it.activeTitle
                             } else {
                                 val pageSuffix = if (output.pageCount > 1) " (${output.pageCount} pgs)" else ""
-                                "${ocrRes.detectedDocType.displayName}$pageSuffix - ${java.text.SimpleDateFormat("MMM dd", java.util.Locale.US).format(java.util.Date())}"
+                                "${ocrRes.detectedDocType.displayName}$pageSuffix - ${java.text.SimpleDateFormat("MMM dd", java.util.Locale("en", "IN")).format(java.util.Date())}"
                             },
                             isDocumentSaved = false
                         )
@@ -1409,4 +1424,29 @@ class SnapDataViewModel(
             )
         }
     }
+
+    // --- On-Device Offline AI Model Management ---
+    fun downloadOfflineAiModel() {
+        viewModelScope.launch {
+            modelManager.downloadModel()
+        }
+    }
+
+    fun cancelOfflineAiModelDownload() {
+        modelManager.cancelDownload()
+    }
+
+    fun verifyOfflineAiModel() {
+        viewModelScope.launch {
+            modelManager.verifyInstalledModel()
+        }
+    }
+
+    fun deleteOfflineAiModel() {
+        viewModelScope.launch {
+            OnDeviceNeuralDocumentAnalyzer.getInstance().unload()
+            modelManager.deleteModel()
+        }
+    }
 }
+

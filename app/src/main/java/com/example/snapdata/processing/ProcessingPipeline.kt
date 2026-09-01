@@ -2,8 +2,12 @@ package com.example.snapdata.processing
 
 import android.content.Context
 import android.graphics.Bitmap
+import com.example.snapdata.ai.engine.OnDeviceNeuralDocumentAnalyzer
+import com.example.snapdata.ai.model.OnDeviceModelManager
 import com.example.snapdata.logging.AppLogger
+import com.example.snapdata.model.ConfidenceSource
 import com.example.snapdata.model.DocumentType
+import com.example.snapdata.model.ProcessingMode
 import com.example.snapdata.model.ProcessingOptions
 import com.example.snapdata.model.ProcessingProgress
 import com.example.snapdata.model.ProcessingStage
@@ -96,15 +100,24 @@ object ProcessingPipeline {
             } else {
                 OcrEngine.recognizeTextFromBitmap(prepResult.enhancedBitmap)
             }
+            val baseOcrResult = OcrEngine.parseTextToStructuredData(rawOcrText, forcedType)
             delay(150)
 
             // Stage 4: AI Analysis & Classification
             currentCoroutineContext().ensureActive()
-            val isCloud = options.enableCloudAi && !options.forceOfflineAi
-            val stage4Message = if (isCloud) {
+            val isExplicitOnline = options.processingMode == ProcessingMode.ONLINE_AI || (options.enableCloudAi && !options.forceOfflineAi)
+            val isOcrOnly = options.processingMode == ProcessingMode.OCR_ONLY
+            val modelManager = OnDeviceModelManager.getInstance(context)
+            val isLocalModelReady = (modelManager.modelFile.exists() && modelManager.modelFile.length() > 0) || OnDeviceNeuralDocumentAnalyzer.getInstance().isReady
+
+            val stage4Message = if (isExplicitOnline) {
                 "Executing cloud semantic extraction via Gemini AI..."
+            } else if (!isOcrOnly && isLocalModelReady) {
+                "Running 100% On-Device Neural AI Document Understanding..."
+            } else if (isOcrOnly) {
+                "Running Fast On-Device ML Kit OCR..."
             } else {
-                "Running 100% on-device heuristic layout analysis and classification..."
+                "Analyzing layout semantics via On-Device ML Kit OCR..."
             }
 
             emit(
@@ -119,15 +132,68 @@ object ProcessingPipeline {
                 )
             )
 
-            val executionResult = GeminiAiService.extractStructuredDocument(
-                bitmap = prepResult.enhancedBitmap,
-                hintText = rawOcrText,
-                forceOffline = options.forceOfflineAi,
-                enableCloudAi = options.enableCloudAi,
-                forcedType = forcedType
-            )
+            val executionResult: ProcessingExecutionResult = if (isExplicitOnline) {
+                GeminiAiService.extractStructuredDocument(
+                    bitmap = prepResult.enhancedBitmap,
+                    hintText = rawOcrText,
+                    forceOffline = false,
+                    enableCloudAi = true,
+                    forcedType = forcedType
+                )
+            } else if (!isOcrOnly && isLocalModelReady) {
+                val analyzer = OnDeviceNeuralDocumentAnalyzer.getInstance()
+                if (!analyzer.isReady && modelManager.modelFile.exists()) {
+                    analyzer.initialize(modelManager.modelFile)
+                }
+
+                val aiResult = analyzer.analyze(baseOcrResult, forcedType)
+                if (aiResult.isSuccess) {
+                    val aiOut = aiResult.getOrThrow()
+                    val structuredResult = OcrEngine.OcrResult(
+                        rawText = rawOcrText,
+                        detectedDocType = aiOut.detectedDocType,
+                        summary = aiOut.summary,
+                        fields = aiOut.fields,
+                        tables = aiOut.tables,
+                        overallConfidence = aiOut.overallConfidence,
+                        lineCount = rawOcrText.lines().filter { it.isNotBlank() }.size,
+                        confidenceSource = ConfidenceSource.MEASURED,
+                        blocksCount = baseOcrResult.blocksCount,
+                        wordCount = baseOcrResult.wordCount,
+                        processingTimeMs = aiOut.inferenceTimeMs,
+                        qualityWarnings = aiOut.warnings
+                    )
+                    ProcessingExecutionResult(
+                        ocrResult = structuredResult,
+                        engineUsed = ExecutionEngine.ON_DEVICE_LOCAL_AI,
+                        isOffline = true,
+                        diagnosticMessage = "100% On-Device Neural AI Document Extraction. Zero internet data transfer."
+                    )
+                } else {
+                    ProcessingExecutionResult(
+                        ocrResult = baseOcrResult,
+                        engineUsed = ExecutionEngine.LOCAL_OCR_ONLY,
+                        isOffline = true,
+                        diagnosticMessage = "On-Device Neural AI fallback to ML Kit OCR: ${aiResult.exceptionOrNull()?.localizedMessage}"
+                    )
+                }
+            } else {
+                val msg = if (isOcrOnly) {
+                    "Processed with Fast On-Device ML Kit OCR (OCR Only mode)."
+                } else {
+                    "Offline AI Model not installed. Processed with on-device ML Kit OCR. Download Offline AI Model in Settings."
+                }
+                ProcessingExecutionResult(
+                    ocrResult = baseOcrResult,
+                    engineUsed = ExecutionEngine.LOCAL_OCR_ONLY,
+                    isOffline = true,
+                    diagnosticMessage = msg
+                )
+            }
+
             val ocrResult = executionResult.ocrResult
             delay(150)
+
 
             // Stage 5: Structured Field & Table Matrix Extraction
             currentCoroutineContext().ensureActive()
@@ -388,47 +454,98 @@ object ProcessingPipeline {
 
             // Stage 4: Semantic AI Evaluation & Refinement
             currentCoroutineContext().ensureActive()
-            val isCloud = options.enableCloudAi && !options.forceOfflineAi
+            val isExplicitOnline = options.processingMode == ProcessingMode.ONLINE_AI || (options.enableCloudAi && !options.forceOfflineAi)
+            val isOcrOnly = options.processingMode == ProcessingMode.OCR_ONLY
+            val modelManager = OnDeviceModelManager.getInstance(context)
+            val isLocalModelReady = (modelManager.modelFile.exists() && modelManager.modelFile.length() > 0) || OnDeviceNeuralDocumentAnalyzer.getInstance().isReady
+
+            val multiStageMessage = if (isExplicitOnline) {
+                "Running cloud semantic refinement via Gemini AI..."
+            } else if (!isOcrOnly && isLocalModelReady) {
+                "Applying multi-page On-Device Neural AI extraction..."
+            } else if (isOcrOnly) {
+                "Applying multi-page Fast On-Device ML Kit OCR..."
+            } else {
+                "Applying multi-page layout aggregation via ML Kit OCR..."
+            }
+
             emit(
                 Pair(
                     ProcessingProgress(
                         stage = ProcessingStage.AI_ANALYSIS,
                         currentStep = 5,
                         totalSteps = 6,
-                        detailMessage = if (isCloud) "Running cloud semantic refinement via Gemini AI..." else "Applying multi-page semantic verification on-device..."
+                        detailMessage = multiStageMessage
                     ),
                     null
                 )
             )
 
-            val executionResult = if (isCloud && coverEnhancedBitmap != null) {
+            val executionResult = if (isExplicitOnline && coverEnhancedBitmap != null) {
                 GeminiAiService.extractStructuredDocument(
                     bitmap = coverEnhancedBitmap,
                     hintText = combinedOcrResult.rawText,
-                    forceOffline = options.forceOfflineAi,
-                    enableCloudAi = options.enableCloudAi,
+                    forceOffline = false,
+                    enableCloudAi = true,
                     forcedType = forcedType
                 )
+            } else if (!isOcrOnly && isLocalModelReady) {
+                val analyzer = OnDeviceNeuralDocumentAnalyzer.getInstance()
+                if (!analyzer.isReady && modelManager.modelFile.exists()) {
+                    analyzer.initialize(modelManager.modelFile)
+                }
+                val aiRes = analyzer.analyze(combinedOcrResult, forcedType)
+                if (aiRes.isSuccess) {
+                    val aiOut = aiRes.getOrThrow()
+                    val structuredResult = combinedOcrResult.copy(
+                        detectedDocType = aiOut.detectedDocType,
+                        summary = aiOut.summary,
+                        fields = if (aiOut.fields.isNotEmpty()) aiOut.fields else combinedOcrResult.fields,
+                        tables = if (aiOut.tables.isNotEmpty()) aiOut.tables else combinedOcrResult.tables,
+                        overallConfidence = aiOut.overallConfidence,
+                        confidenceSource = ConfidenceSource.MEASURED,
+                        qualityWarnings = aiOut.warnings
+                    )
+                    ProcessingExecutionResult(
+                        ocrResult = structuredResult,
+                        engineUsed = ExecutionEngine.ON_DEVICE_LOCAL_AI,
+                        isOffline = true,
+                        diagnosticMessage = "Successfully extracted $pagesToProcess pages with 100% On-Device Neural AI."
+                    )
+                } else {
+                    ProcessingExecutionResult(
+                        ocrResult = combinedOcrResult,
+                        engineUsed = ExecutionEngine.LOCAL_OCR_ONLY,
+                        isOffline = true,
+                        diagnosticMessage = "Parsed $pagesToProcess pages using On-Device ML Kit OCR: ${aiRes.exceptionOrNull()?.localizedMessage}"
+                    )
+                }
             } else {
+                val msg = if (isOcrOnly) {
+                    "Parsed $pagesToProcess pages using Fast On-Device ML Kit OCR (OCR Only mode)."
+                } else {
+                    "Parsed $pagesToProcess pages using On-Device ML Kit OCR. (Download Offline AI Model in Settings)."
+                }
                 ProcessingExecutionResult(
                     ocrResult = combinedOcrResult,
-                    engineUsed = ExecutionEngine.ON_DEVICE_LOCAL,
+                    engineUsed = ExecutionEngine.LOCAL_OCR_ONLY,
                     isOffline = true,
-                    diagnosticMessage = "Successfully parsed $pagesToProcess pages with on-device intelligence."
+                    diagnosticMessage = msg
                 )
             }
 
             // Merge any final AI adjustments or use combined result
-            val finalOcrResult = if (isCloud && executionResult.engineUsed != ExecutionEngine.ON_DEVICE_LOCAL) {
+            val finalOcrResult = if (isExplicitOnline && executionResult.engineUsed.isCloud) {
                 // If cloud returned fields, keep multi-page combined tables and text
                 executionResult.ocrResult.copy(
                     rawText = combinedOcrResult.rawText,
                     tables = if (executionResult.ocrResult.tables.isNotEmpty()) executionResult.ocrResult.tables else combinedOcrResult.tables
                 )
             } else {
-                combinedOcrResult
+                executionResult.ocrResult
             }
             delay(150)
+
 
             // Stage 5: Validation & Integrity Check
             currentCoroutineContext().ensureActive()

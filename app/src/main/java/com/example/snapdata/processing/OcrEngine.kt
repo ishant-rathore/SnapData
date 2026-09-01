@@ -579,14 +579,14 @@ object OcrEngine {
     private fun classifyDocumentType(lines: List<String>): DocumentType {
         val fullText = lines.joinToString(" ").lowercase()
         return when {
-            fullText.contains("tax invoice") || fullText.contains("invoice #") || fullText.contains("invoice no") || fullText.contains("bill to") || fullText.contains("invoice date") || (fullText.contains("invoice") && fullText.contains("total")) -> DocumentType.INVOICE
-            fullText.contains("receipt") || fullText.contains("cashier") || fullText.contains("change due") || fullText.contains("pos terminal") || fullText.contains("subtotal") && fullText.contains("tax") && fullText.contains("cash") -> DocumentType.RECEIPT
-            fullText.contains("statement of account") || fullText.contains("bank statement") || fullText.contains("balance forward") || fullText.contains("account balance") || fullText.contains("credit balance") || fullText.contains("closing balance") -> DocumentType.BANK_STATEMENT
-            fullText.contains("application form") || fullText.contains("registration form") || fullText.contains("date of birth") || fullText.contains("applicant signature") || fullText.contains("[x]") || fullText.contains("[ ]") -> DocumentType.FORM
-            fullText.contains("certificate of") || fullText.contains("hereby certifies") || fullText.contains("awarded to") || fullText.contains("in witness whereof") || fullText.contains("conferred upon") -> DocumentType.CERTIFICATE
-            fullText.contains("grade point") || fullText.contains("marksheet") || fullText.contains("mark sheet") || fullText.contains("transcript of records") || fullText.contains("semester") || fullText.contains("sgpa") || fullText.contains("cgpa") -> DocumentType.MARK_SHEET
-            fullText.contains("identity card") || fullText.contains("driving license") || fullText.contains("driver license") || fullText.contains("id no") || fullText.contains("passport") || fullText.contains("national identity") -> DocumentType.ID_CARD
-            fullText.contains("business card") || (fullText.contains("tel:") && fullText.contains("@") && fullText.contains("www.")) -> DocumentType.BUSINESS_CARD
+            fullText.contains("tax invoice") || fullText.contains("invoice #") || fullText.contains("invoice no") || fullText.contains("bill to") || fullText.contains("invoice date") || fullText.contains("gstin") || fullText.contains("चालान") || (fullText.contains("invoice") && fullText.contains("total")) -> DocumentType.INVOICE
+            fullText.contains("receipt") || fullText.contains("cashier") || fullText.contains("change due") || fullText.contains("pos terminal") || fullText.contains("रसीद") || (fullText.contains("subtotal") && fullText.contains("tax") && fullText.contains("cash")) -> DocumentType.RECEIPT
+            fullText.contains("statement of account") || fullText.contains("bank statement") || fullText.contains("balance forward") || fullText.contains("account balance") || fullText.contains("credit balance") || fullText.contains("closing balance") || fullText.contains("खाता") || fullText.contains("ifsc") -> DocumentType.BANK_STATEMENT
+            fullText.contains("application form") || fullText.contains("registration form") || fullText.contains("date of birth") || fullText.contains("applicant signature") || fullText.contains("kyc form") || fullText.contains("[x]") || fullText.contains("[ ]") -> DocumentType.FORM
+            fullText.contains("certificate of") || fullText.contains("hereby certifies") || fullText.contains("awarded to") || fullText.contains("in witness whereof") || fullText.contains("conferred upon") || fullText.contains("प्रमाण पत्र") -> DocumentType.CERTIFICATE
+            fullText.contains("grade point") || fullText.contains("marksheet") || fullText.contains("mark sheet") || fullText.contains("transcript of records") || fullText.contains("semester") || fullText.contains("sgpa") || fullText.contains("cgpa") || fullText.contains("अंकतालिका") -> DocumentType.MARK_SHEET
+            fullText.contains("identity card") || fullText.contains("driving license") || fullText.contains("driver license") || fullText.contains("id no") || fullText.contains("passport") || fullText.contains("national identity") || fullText.contains("aadhaar") || fullText.contains("pan card") || fullText.contains("voter id") -> DocumentType.ID_CARD
+            fullText.contains("business card") || (fullText.contains("tel:") && fullText.contains("@") && fullText.contains("www.")) || (fullText.contains("mobile:") && fullText.contains("@")) -> DocumentType.BUSINESS_CARD
             fullText.contains("|") || fullText.contains("columns") || fullText.contains("table") -> DocumentType.TABLE
             else -> DocumentType.GENERAL_DOCUMENT
         }
@@ -595,11 +595,12 @@ object OcrEngine {
     private fun determineCategory(key: String, docType: DocumentType): String {
         val lowerKey = key.lowercase()
         return when {
+            lowerKey.contains("gst") || lowerKey.contains("cgst") || lowerKey.contains("sgst") || lowerKey.contains("igst") || lowerKey.contains("hsn") || lowerKey.contains("sac") || lowerKey.contains("cess") -> "Tax"
             lowerKey.contains("total") || lowerKey.contains("amount") || lowerKey.contains("price") || lowerKey.contains("tax") || lowerKey.contains("subtotal") || lowerKey.contains("balance") || lowerKey.contains("fee") || lowerKey.contains("cost") || lowerKey.contains("discount") -> "Financial"
             lowerKey.contains("date") || lowerKey.contains("due") || lowerKey.contains("time") || lowerKey.contains("year") || lowerKey.contains("period") || lowerKey.contains("month") -> "Temporal"
             lowerKey.contains("name") || lowerKey.contains("vendor") || lowerKey.contains("client") || lowerKey.contains("customer") || lowerKey.contains("recipient") || lowerKey.contains("issuer") || lowerKey.contains("holder") || lowerKey.contains("candidate") || lowerKey.contains("student") -> "Party / Entity"
-            lowerKey.contains("id") || lowerKey.contains("number") || lowerKey.contains("no.") || lowerKey.contains("code") || lowerKey.contains("reg") || lowerKey.contains("pin") || lowerKey.contains("ssn") || lowerKey.contains("roll") -> "Identifier"
-            lowerKey.contains("address") || lowerKey.contains("city") || lowerKey.contains("zip") || lowerKey.contains("state") || lowerKey.contains("country") || lowerKey.contains("street") -> "Location"
+            lowerKey.contains("id") || lowerKey.contains("number") || lowerKey.contains("no.") || lowerKey.contains("code") || lowerKey.contains("reg") || lowerKey.contains("pin") || lowerKey.contains("pincode") || lowerKey.contains("pan") || lowerKey.contains("aadhaar") || lowerKey.contains("gstin") || lowerKey.contains("ifsc") || lowerKey.contains("roll") || lowerKey.contains("ssn") -> "Identifier"
+            lowerKey.contains("address") || lowerKey.contains("city") || lowerKey.contains("zip") || lowerKey.contains("pincode") || lowerKey.contains("pin") || lowerKey.contains("state") || lowerKey.contains("country") || lowerKey.contains("street") || lowerKey.contains("road") || lowerKey.contains("nagar") || lowerKey.contains("marg") -> "Location"
             else -> docType.category
         }
     }

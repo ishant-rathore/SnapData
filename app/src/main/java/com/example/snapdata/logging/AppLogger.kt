@@ -30,13 +30,20 @@ object AppLogger {
     }
 
     private val BEARER_REGEX = Regex("(?i)bearer\\s+([a-zA-Z0-9_\\-\\.]+)")
-    private val API_KEY_REGEX = Regex("(?i)(key|api_key|apikey|authorization|bearer|token|password|secret|pass|pin|pwd)\\s*[:=]\\s*[\"']?([a-zA-Z0-9_\\-\\.]+)[\"']?")
+    private val API_KEY_REGEX = Regex("(?i)(key|api_key|apikey|authorization|bearer|token|password|secret|pass|pin|pwd|session_token)\\s*[:=]\\s*[\"']?([a-zA-Z0-9_\\-\\.]+)[\"']?")
     private val GEMINI_KEY_PATTERN = Regex("AIzaSy[a-zA-Z0-9_\\-]{33}")
+    private val GENERIC_SECRET_PATTERN = Regex("(?i)(password|secret|apikey|access_token|auth_token)\\s*=\\s*[^&\\s]+")
+    
+    // Indian PII patterns for safe log redaction
+    private val AADHAAR_REGEX = Regex("\\b\\d{4}\\s?\\d{4}\\s?\\d{4}\\b")
+    private val PAN_REGEX = Regex("\\b[A-Z]{5}[0-9]{4}[A-Z]{1}\\b")
+    private val CREDIT_CARD_REGEX = Regex("\\b(?:\\d{4}[-\\s]?){3}\\d{4}\\b")
+    private val EMAIL_REGEX = Regex("\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b")
 
     var isDebugEnabled: Boolean = true
 
     /**
-     * Sanitizes sensitive secrets from log strings.
+     * Sanitizes sensitive secrets, API keys, and credentials from log strings.
      */
     fun sanitize(message: String?): String {
         if (message == null) return ""
@@ -46,6 +53,26 @@ object AppLogger {
         sanitized = API_KEY_REGEX.replace(sanitized) { matchResult ->
             val param = matchResult.groupValues[1]
             "$param=[REDACTED]"
+        }
+        sanitized = GENERIC_SECRET_PATTERN.replace(sanitized) { matchResult ->
+            val param = matchResult.groupValues[1]
+            "$param=[REDACTED]"
+        }
+        return sanitized
+    }
+
+    /**
+     * Deep-redacts Personally Identifiable Information (PII) like PAN, Aadhaar, Email, and Cards.
+     */
+    fun redactPii(message: String?): String {
+        if (message == null) return ""
+        var sanitized = sanitize(message)
+        sanitized = AADHAAR_REGEX.replace(sanitized, "XXXX-XXXX-[REDACTED]")
+        sanitized = PAN_REGEX.replace(sanitized, "XXXXX[REDACTED]")
+        sanitized = CREDIT_CARD_REGEX.replace(sanitized, "XXXX-XXXX-XXXX-[REDACTED]")
+        sanitized = EMAIL_REGEX.replace(sanitized) { match ->
+            val parts = match.value.split("@")
+            "${parts.firstOrNull()?.take(2) ?: ""}***@${parts.getOrNull(1) ?: "***"}"
         }
         return sanitized
     }

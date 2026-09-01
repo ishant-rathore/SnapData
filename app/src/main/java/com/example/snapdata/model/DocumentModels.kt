@@ -61,6 +61,13 @@ enum class ProcessingStage(val title: String, val description: String, val progr
 }
 
 @Serializable
+enum class ProcessingMode(val displayName: String, val isNetworkRequired: Boolean) {
+    OFFLINE_AI("100% Offline AI", false),
+    OCR_ONLY("On-Device OCR Only", false),
+    ONLINE_AI("Cloud Gemini AI (Optional)", true)
+}
+
+@Serializable
 data class ProcessingOptions(
     val ocrLanguage: String = "English (en)",
     val enhanceContrast: Boolean = true,
@@ -69,13 +76,15 @@ data class ProcessingOptions(
     val removeShadows: Boolean = true,
     val binarize: Boolean = false,
     val deskew: Boolean = true,
+    val processingMode: ProcessingMode = ProcessingMode.OFFLINE_AI,
     val forceOfflineAi: Boolean = true,
     val enableCloudAi: Boolean = false,
     val detectTables: Boolean = true,
     val enablePiiRedaction: Boolean = false
 ) {
     val autoContrast: Boolean get() = enhanceContrast
-    val useOfflineOcr: Boolean get() = forceOfflineAi
+    val useOfflineOcr: Boolean get() = processingMode != ProcessingMode.ONLINE_AI
+    val isStrictlyOffline: Boolean get() = processingMode == ProcessingMode.OFFLINE_AI || processingMode == ProcessingMode.OCR_ONLY
 }
 
 enum class ExportFormat(val extension: String, val mimeType: String, val displayName: String) {

@@ -110,8 +110,8 @@ class AuthModelsTest {
     fun `AuthUser copy preserves all fields`() {
         val user = AuthUser(
             id = "usr_001",
-            email = "test@example.com",
-            displayName = "Test User",
+            email = "aarav.sharma@example.in",
+            displayName = "Aarav Sharma",
             isEmailVerified = false,
             isGuest = false,
             createdAt = 1000L,
@@ -119,16 +119,16 @@ class AuthModelsTest {
         )
         val updated = user.copy(isEmailVerified = true)
         assertEquals("usr_001", updated.id)
-        assertEquals("test@example.com", updated.email)
-        assertEquals("Test User", updated.displayName)
+        assertEquals("aarav.sharma@example.in", updated.email)
+        assertEquals("Aarav Sharma", updated.displayName)
         assertTrue(updated.isEmailVerified)
         assertFalse(updated.isGuest)
     }
 
     @Test
     fun `AuthUser equality is value-based`() {
-        val user1 = AuthUser(id = "usr_001", email = "a@b.com")
-        val user2 = AuthUser(id = "usr_001", email = "a@b.com")
+        val user1 = AuthUser(id = "usr_001", email = "a@b.com", createdAt = 1000L, lastLoginAt = 2000L)
+        val user2 = AuthUser(id = "usr_001", email = "a@b.com", createdAt = 1000L, lastLoginAt = 2000L)
         assertEquals(user1, user2)
     }
 
@@ -138,7 +138,7 @@ class AuthModelsTest {
 
     @Test
     fun `AuthState Authenticated contains user`() {
-        val user = AuthUser(id = "usr_001", email = "test@example.com")
+        val user = AuthUser(id = "usr_001", email = "aarav.sharma@example.in")
         val state = AuthState.Authenticated(user, "token_abc")
         assertEquals(user, state.user)
         assertEquals("token_abc", state.sessionToken)

@@ -24,25 +24,28 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.snapdata.ai.model.ModelStatus
 import com.example.snapdata.processing.GeminiAiService
 import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
 import com.example.snapdata.ui.components.SnapDataPrimaryButton
 import com.example.snapdata.ui.components.SnapDataSecondaryButton
+import com.example.snapdata.ui.components.branding.*
 import com.example.snapdata.ui.illustrations.OnDevicePrivacyIllustration
 import com.example.snapdata.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-import com.example.snapdata.ui.components.branding.SnapDataLogo
-import com.example.snapdata.ui.components.branding.SnapDataLogoVariant
-import com.example.snapdata.ui.components.branding.SnapDataSymbol
-import com.example.snapdata.ui.components.branding.SnapDataTagline
-import com.example.snapdata.ui.components.branding.SnapDataWordmark
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: SnapDataViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val totalCount by viewModel.totalDocumentCount.collectAsState()
+    val modelStatus by viewModel.modelStatus.collectAsState()
+    val modelProgress by viewModel.modelProgress.collectAsState()
+    val modelLastVerified by viewModel.modelLastVerified.collectAsState()
     val context = LocalContext.current
 
     val hasGeminiKey = remember { GeminiAiService.isGeminiConfigured() }
@@ -53,6 +56,8 @@ fun SettingsScreen(viewModel: SnapDataViewModel) {
     var deskew by remember { mutableStateOf(uiState.processingOptions.deskew) }
     var piiRedaction by remember { mutableStateOf(uiState.processingOptions.enablePiiRedaction) }
     var showClearDataDialog by remember { mutableStateOf(false) }
+    var showDeleteModelDialog by remember { mutableStateOf(false) }
+
 
     Scaffold(
         containerColor = WarmCreamBackground,
@@ -250,7 +255,218 @@ fun SettingsScreen(viewModel: SnapDataViewModel) {
                 }
             }
 
-            // 2. OCR & AI Processing Engine
+            // 2. Offline AI Model Lifecycle & Management
+            item {
+                val metadata = viewModel.modelMetadata
+                val installedSize = viewModel.modelManager.getInstalledModelSizeBytes()
+                val isDownloading = modelStatus == ModelStatus.DOWNLOADING
+                val isVerifying = modelStatus == ModelStatus.VERIFYING
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                        .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CardWhite)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Offline AI Model Engine",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 15.sp
+                            )
+
+                            // Status badge
+                            val badgeColor = when (modelStatus) {
+                                ModelStatus.READY -> Color(0xFF00875A) // Green
+                                ModelStatus.DOWNLOADING, ModelStatus.VERIFYING -> Color(0xFF0052CC) // Blue
+                                ModelStatus.NOT_INSTALLED -> Color(0xFF6B778C) // Gray
+                                ModelStatus.CORRUPTED, ModelStatus.FAILED -> Color(0xFFDE350B) // Red
+                                ModelStatus.DELETING -> Color(0xFFFF8B00) // Orange
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = badgeColor.copy(alpha = 0.12f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(badgeColor)
+                                    )
+                                    Text(
+                                        text = modelStatus.displayName,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = badgeColor
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = metadata.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            fontSize = 11.5.sp
+                        )
+
+                        HorizontalDivider(color = SubtleBorder)
+
+                        // Model Details Table
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Model Version", fontSize = 12.sp, color = TextSecondary)
+                                Text("v${metadata.version}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SnapDataBlack)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Model Package Size", fontSize = 12.sp, color = TextSecondary)
+                                val sizeText = if (installedSize > 0) "%.1f MB (Installed)".format(Locale.US, installedSize / (1024 * 1024.0)) else "~24.5 MB"
+                                Text(sizeText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SnapDataBlack)
+
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Inference Architecture", fontSize = 12.sp, color = TextSecondary)
+                                Text("Quantized Neural Seq2Seq", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SnapDataBlack)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Last Integrity Verification", fontSize = 12.sp, color = TextSecondary)
+                                val dateStr = if (modelLastVerified > 0) {
+                                    SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.US).format(Date(modelLastVerified))
+                                } else {
+                                    "Not verified yet"
+                                }
+                                Text(dateStr, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SnapDataBlack)
+                            }
+                        }
+
+                        // Live Download / Verification Progress Bar
+                        if (isDownloading || isVerifying) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = modelProgress.detailMessage.ifBlank { "Processing..." },
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextDark
+                                    )
+                                    Text(
+                                        text = "${modelProgress.progressPercent}%",
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = SnapDataRed
+                                    )
+                                }
+                                LinearProgressIndicator(
+                                    progress = { modelProgress.progressPercent / 100f },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = SnapDataRed,
+                                    trackColor = SubtleBorder
+                                )
+
+                                if (isDownloading) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End
+                                    ) {
+                                        TextButton(
+                                            onClick = { viewModel.cancelOfflineAiModelDownload() },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Cancel Download", fontSize = 11.sp, color = SnapDataRed)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Action Buttons based on Model State
+                        when (modelStatus) {
+                            ModelStatus.READY -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.verifyOfflineAiModel() },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color(0xFF00875A))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Verify Integrity", fontSize = 12.sp)
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = { showDeleteModelDialog = true },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SnapDataRed)
+                                    ) {
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(16.dp), tint = SnapDataRed)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Delete Model", fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                            ModelStatus.NOT_INSTALLED, ModelStatus.FAILED, ModelStatus.CORRUPTED -> {
+                                val buttonLabel = if (modelStatus == ModelStatus.NOT_INSTALLED) "Download Offline AI Model" else "Retry Model Setup"
+                                SnapDataPrimaryButton(
+                                    text = buttonLabel,
+                                    icon = Icons.Default.Download,
+                                    onClick = { viewModel.downloadOfflineAiModel() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    testTag = "download_offline_ai_model_btn"
+                                )
+                            }
+                            else -> { /* In progress */ }
+                        }
+                    }
+                }
+            }
+
+            // 3. OCR & AI Processing Engine
             item {
                 Card(
                     modifier = Modifier
@@ -260,6 +476,7 @@ fun SettingsScreen(viewModel: SnapDataViewModel) {
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = CardWhite)
                 ) {
+
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -463,7 +680,37 @@ fun SettingsScreen(viewModel: SnapDataViewModel) {
             }
         )
     }
+
+    if (showDeleteModelDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteModelDialog = false },
+            containerColor = CardWhite,
+            shape = RoundedCornerShape(20.dp),
+            icon = { Icon(Icons.Default.DeleteForever, contentDescription = null, tint = SnapDataRed) },
+            title = { Text("Delete Offline AI Model?", fontWeight = FontWeight.Bold, color = SnapDataBlack) },
+            text = { Text("This will delete the 24.5 MB local on-device neural model from your device storage. Document extraction will revert to heuristic OCR until re-downloaded.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteOfflineAiModel()
+                        showDeleteModelDialog = false
+                        Toast.makeText(context, "Offline AI Model removed", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SnapDataRed),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Delete Model", color = CardWhite, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteModelDialog = false }) {
+                    Text("Keep Model", color = TextSecondary)
+                }
+            }
+        )
+    }
 }
+
 
 @Composable
 private fun SettingsToggleRow(

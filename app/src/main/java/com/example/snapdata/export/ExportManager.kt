@@ -24,6 +24,8 @@ import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+import com.example.snapdata.util.SafeFilenameUtil
+
 /**
  * Production-hardened Export Manager for SnapData.
  * Supports Excel (.xlsx), CSV (.csv), JSON (.json), and PDF (.pdf).
@@ -55,22 +57,14 @@ object ExportManager {
      * and trims to a safe length.
      */
     fun sanitizeFilename(title: String, fallback: String = "Document"): String {
-        val clean = title
-            .replace(Regex("[\\\\/:*?\"<>|\\x00-\\x1F]"), "_")
-            .replace(Regex("\\s+"), "_")
-            .replace(Regex("_+"), "_")
-            .trim('_', '.', ' ')
-
-        return if (clean.isBlank()) fallback else clean.take(40)
+        return SafeFilenameUtil.sanitizeBaseName(title, fallback = fallback, maxBaseLength = 40)
     }
 
     /**
      * Generates a unique, collision-resistant, filesystem-safe filename.
      */
     fun generateExportFilename(title: String, format: ExportFormat): String {
-        val safeTitle = sanitizeFilename(title)
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        return "SnapData_${safeTitle}_$timestamp.${format.extension}"
+        return SafeFilenameUtil.buildSafeFilename(title, extension = format.extension, prefix = "SnapData", includeTimestamp = true)
     }
 
     /**
@@ -78,7 +72,7 @@ object ExportManager {
      * Throws descriptive exceptions on IO or formatting failures.
      */
     fun exportDocument(context: Context, doc: DocumentEntity, format: ExportFormat): ExportResult {
-        AppLogger.i(AppLogger.LogDomain.EXPORT, "Starting export for document #${doc.id} ('${doc.title}') as ${format.displayName}")
+        AppLogger.i(AppLogger.LogDomain.EXPORT, "Starting export for document #${doc.id} ('${SafeFilenameUtil.sanitizeBaseName(doc.title)}') as ${format.displayName}")
         val exportDir = File(context.cacheDir, "exports")
         if (!exportDir.exists() && !exportDir.mkdirs()) {
             val err = "Failed to create export directory in application cache: ${exportDir.absolutePath}"
@@ -88,6 +82,13 @@ object ExportManager {
 
         val fileName = generateExportFilename(doc.title, format)
         val targetFile = File(exportDir, fileName)
+
+        // Strict Path Traversal verification
+        if (!SafeFilenameUtil.isPathInsideDirectory(targetFile, exportDir)) {
+            val err = "Path traversal detected in export target: ${targetFile.name}"
+            AppLogger.e(AppLogger.LogDomain.EXPORT, err)
+            throw SecurityException(err)
+        }
 
         // Ensure clean target file
         if (targetFile.exists()) {
