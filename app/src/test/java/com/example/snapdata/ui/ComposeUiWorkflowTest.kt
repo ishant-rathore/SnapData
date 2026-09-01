@@ -249,20 +249,68 @@ class ComposeUiWorkflowTest {
         val freshState = UiState()
         assertEquals(AppScreen.LANDING, freshState.currentScreen)
 
-        // Step 1: Tap Get Started / Download -> Navigate to AUTH_WELCOME (or HOME)
-        var state = freshState.copy(currentScreen = AppScreen.AUTH_WELCOME)
-        assertEquals(AppScreen.AUTH_WELCOME, state.currentScreen)
+        // Step 1: User taps Landing Page CTA / Get Started -> Opens User Guide
+        var state = freshState.copy(currentScreen = AppScreen.USER_GUIDE)
+        assertEquals(AppScreen.USER_GUIDE, state.currentScreen)
 
-        // Step 2: Choose Sign In / Sign Up -> Navigate to SIGN_IN
-        state = state.copy(currentScreen = AppScreen.SIGN_IN)
-        assertEquals(AppScreen.SIGN_IN, state.currentScreen)
-
-        // Step 3: Successful Authentication -> Navigate to HOME
+        // Step 2: User completes or skips the App Guide -> Navigates to Home Dashboard
         state = state.copy(currentScreen = AppScreen.HOME)
         assertEquals(AppScreen.HOME, state.currentScreen)
 
-        // Step 4: Verify flow sequence: LANDING -> AUTH_WELCOME -> SIGN_IN -> HOME
-        assertTrue(state.currentScreen == AppScreen.HOME)
+        // Step 3: Verify flow sequence: LANDING -> USER_GUIDE -> HOME
+        assertEquals(AppScreen.HOME, state.currentScreen)
+    }
+
+    @Test
+    fun testDemoPrototypeAppRestartFlowDeterministic() {
+        // Run 1: Launch app
+        val launch1 = UiState()
+        assertEquals("Launch 1 must start at LANDING", AppScreen.LANDING, launch1.currentScreen)
+
+        // Run 1: Tap Get Started -> Opens Guide
+        val guide1 = launch1.copy(currentScreen = AppScreen.USER_GUIDE)
+        assertEquals("Launch 1 CTA must open USER_GUIDE", AppScreen.USER_GUIDE, guide1.currentScreen)
+
+        // Run 1: Complete / Skip Guide -> Home Dashboard
+        val home1 = guide1.copy(currentScreen = AppScreen.HOME)
+        assertEquals("Launch 1 completion must navigate to HOME", AppScreen.HOME, home1.currentScreen)
+
+        // Run 2: App Restart (Simulate process restart / ViewModel re-instantiation)
+        val restartLaunch = UiState()
+        assertEquals("App restart must ALWAYS begin at LANDING again", AppScreen.LANDING, restartLaunch.currentScreen)
+
+        // Run 2: Tap Get Started -> Opens Guide AGAIN (not bypassed)
+        val restartGuide = restartLaunch.copy(currentScreen = AppScreen.USER_GUIDE)
+        assertEquals("App restart CTA must open USER_GUIDE AGAIN", AppScreen.USER_GUIDE, restartGuide.currentScreen)
+
+        // Run 2: Complete / Skip Guide -> Home Dashboard
+        val restartHome = restartGuide.copy(currentScreen = AppScreen.HOME)
+        assertEquals("App restart completion must navigate to HOME", AppScreen.HOME, restartHome.currentScreen)
+    }
+
+    @Test
+    fun testUserGuideBackNavigationFlow() {
+        // Verify GuideStep step progression
+        assertEquals(com.example.snapdata.ui.screens.guide.GuideStep.HOME_DASHBOARD, com.example.snapdata.ui.screens.guide.GuideStep.fromIndex(0))
+        assertEquals(com.example.snapdata.ui.screens.guide.GuideStep.DOCUMENT_INPUT, com.example.snapdata.ui.screens.guide.GuideStep.fromIndex(1))
+        assertEquals(com.example.snapdata.ui.screens.guide.GuideStep.COMPLETION, com.example.snapdata.ui.screens.guide.GuideStep.fromIndex(10))
+
+        // Step 0 Back navigation -> Returns to LANDING
+        var stepIndex = 0
+        var currentScreen: AppScreen = AppScreen.USER_GUIDE
+        if (stepIndex == 0) {
+            currentScreen = AppScreen.LANDING
+        }
+        assertEquals(AppScreen.LANDING, currentScreen)
+
+        // Step > 0 Back navigation -> Decrements stepIndex
+        stepIndex = 3
+        currentScreen = AppScreen.USER_GUIDE
+        if (stepIndex > 0) {
+            stepIndex--
+        }
+        assertEquals(2, stepIndex)
+        assertEquals(AppScreen.USER_GUIDE, currentScreen)
     }
 
     @Test

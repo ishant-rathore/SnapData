@@ -615,7 +615,13 @@ class OnDeviceNeuralDocumentAnalyzer private constructor() : OfflineAiEngine {
         tables: List<ExtractedTable>,
         lines: List<String>
     ): String {
-        val keyHighlights = fields.take(3).joinToString(", ") { "${it.key}: ${it.value}" }
+        val safeFields = fields.filter { f ->
+            val k = f.key.lowercase()
+            val v = f.value.lowercase()
+            !k.contains("system") && !k.contains("override") && !k.contains("instruction") &&
+            !k.contains("http") && !v.contains("http://") && !v.contains("https://")
+        }
+        val keyHighlights = (if (safeFields.isNotEmpty()) safeFields else fields).take(3).joinToString(", ") { "${it.key}: ${it.value}" }
         val tableNote = if (tables.isNotEmpty()) " Detected ${tables.size} data table (${tables.sumOf { it.rows.size }} rows)." else ""
 
         return if (keyHighlights.isNotBlank()) {

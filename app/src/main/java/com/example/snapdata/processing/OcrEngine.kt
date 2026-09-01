@@ -332,9 +332,9 @@ object OcrEngine {
 
             // Domain-specific regex token extraction for unpunctuated lines
             when {
-                // Receipt / Invoice item row pattern: "Item Name 2 x 15.00 30.00" or "Item Name $24.99"
-                line.matches(Regex("^(.*?)\\s+(\\d+\\s*[xX]\\s*\\$?\\d+[.,]\\d{2})?\\s*\\$?([\\d,]+[.]\\d{2})$")) -> {
-                    val match = Regex("^(.*?)\\s+(\\d+\\s*[xX]\\s*\\$?\\d+[.,]\\d{2})?\\s*\\$?([\\d,]+[.]\\d{2})$").find(line)
+                // Receipt / Invoice item row pattern: "Item Name 2 x 15.00 30.00" or "Item Name $24.99" or "Item 1 x ₹65.00 ₹65.00"
+                line.matches(Regex("^(.*?)\\s+(\\d+\\s*[xX]\\s*[₹$€£¥]?\\d+[.,]\\d{2})?\\s*([₹$€£¥]?[\\d,]+[.]\\d{2})$")) -> {
+                    val match = Regex("^(.*?)\\s+(\\d+\\s*[xX]\\s*[₹$€£¥]?\\d+[.,]\\d{2})?\\s*([₹$€£¥]?[\\d,]+[.]\\d{2})$").find(line)
                     if (match != null && detectedType in listOf(DocumentType.RECEIPT, DocumentType.INVOICE)) {
                         val itemName = match.groupValues[1].trim()
                         val qtyInfo = match.groupValues[2].trim()
@@ -343,7 +343,7 @@ object OcrEngine {
                             if (currentTableHeaders == null) {
                                 currentTableHeaders = listOf("Description", "Qty / Unit", "Amount")
                             }
-                            tableCandidateRows.add(listOf(itemName, if (qtyInfo.isNotEmpty()) qtyInfo else "1", "$$itemPrice"))
+                            tableCandidateRows.add(listOf(itemName, if (qtyInfo.isNotEmpty()) qtyInfo else "1", itemPrice))
                             continue
                         }
                     }

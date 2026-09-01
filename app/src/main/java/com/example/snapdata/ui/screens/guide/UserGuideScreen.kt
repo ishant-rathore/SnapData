@@ -1,5 +1,6 @@
 package com.example.snapdata.ui.screens.guide
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
 
 /**
@@ -60,11 +62,23 @@ fun UserGuideScreen(
         if (currentStepIndex > 0) {
             targetRect = null
             currentStepIndex--
+        } else {
+            viewModel.navigateTo(AppScreen.LANDING)
         }
     }
 
     fun skipGuide() {
         viewModel.skipUserGuide()
+    }
+
+    BackHandler {
+        if (showSkipConfirmDialog) {
+            showSkipConfirmDialog = false
+        } else if (currentStepIndex > 0) {
+            previousStep()
+        } else {
+            viewModel.navigateTo(AppScreen.LANDING)
+        }
     }
 
     Box(
@@ -200,20 +214,16 @@ fun UserGuideScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Back Button
-                    if (currentStepIndex > 0) {
-                        OutlinedButton(
-                            onClick = { previousStep() },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF333544)),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.height(42.dp).testTag("guide_btn_back")
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Back", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.width(70.dp))
+                    OutlinedButton(
+                        onClick = { previousStep() },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF333544)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.height(42.dp).testTag("guide_btn_back")
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (currentStepIndex > 0) "Back" else "Landing", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     // Skip Tour Button

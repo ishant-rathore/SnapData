@@ -40,10 +40,7 @@ object SafeFilenameUtil {
         if (rawName.isNullOrBlank()) return fallback
 
         // 1. Remove path traversal patterns
-        var clean = rawName
-            .replace("..", "")
-            .replace("/", "")
-            .replace("\\", "")
+        var clean = rawName.replace("..", "")
 
         // 2. Replace illegal characters and control characters with underscore
         clean = ILLEGAL_CHARS_REGEX.replace(clean, "_")
