@@ -297,6 +297,8 @@ class SnapDataViewModel(
         _uiState.update {
             it.copy(
                 currentScreen = target,
+                activeTitle = if (target == AppScreen.ACQUISITION && it.currentScreen != AppScreen.ACQUISITION) "" else it.activeTitle,
+                activeBitmap = if (target == AppScreen.ACQUISITION && it.currentScreen != AppScreen.ACQUISITION) null else it.activeBitmap,
                 saveMessage = null,
                 acquisitionError = null,
                 cameraError = null,
@@ -423,6 +425,42 @@ class SnapDataViewModel(
     }
 
     /**
+     * Resets acquisition state to live camera mode with zero active sample documents.
+     */
+    fun resetAcquisitionMode() {
+        _uiState.update {
+            it.copy(
+                activeTitle = "",
+                activeBitmap = null,
+                activeImagePath = null,
+                activeHintText = null,
+                activeSummary = "",
+                activeRawOcrText = "",
+                activeFields = emptyList(),
+                activeTables = emptyList(),
+                activeDocType = DocumentType.GENERAL_DOCUMENT,
+                activeConfidence = 0.0f,
+                activeDiagnosticMessage = "",
+                activePdfFile = null,
+                activePdfPageCount = 1,
+                activePdfFileName = null,
+                activePageResults = emptyList(),
+                activeDocId = 0,
+                activeCreatedAt = null,
+                isDocumentSaved = false,
+                acquisitionError = null,
+                cameraError = null,
+                imageError = null,
+                pdfError = null,
+                pdfImportError = null,
+                lastExportResult = null,
+                exportError = null
+            )
+        }
+        AppLogger.i(AppLogger.LogDomain.CAMERA, "Acquisition reset to pure live camera mode")
+    }
+
+    /**
      * Explicit Interactive Sample Demo (Runs on explicit user click, without preloading database).
      */
     fun selectSampleDocument(sample: SampleDocument) {
@@ -430,6 +468,7 @@ class SnapDataViewModel(
         _uiState.update {
             it.copy(
                 activeBitmap = bitmap,
+                activeImagePath = null,
                 activeHintText = sample.rawText,
                 activeTitle = sample.title,
                 activeDocType = sample.type,
@@ -458,6 +497,8 @@ class SnapDataViewModel(
                 imageError = null,
                 pdfError = null,
                 pdfImportError = null,
+                lastExportResult = null,
+                exportError = null,
                 appOperationState = OperationState.Success(sample.title),
                 currentScreen = AppScreen.PREPROCESSING
             )
@@ -487,6 +528,13 @@ class SnapDataViewModel(
                         activeImagePath = localFile.absolutePath,
                         activeTitle = if (it.activeTitle.isBlank() || it.activeTitle == "Scanned Document") "Imported Image" else it.activeTitle,
                         activeHintText = null,
+                        activeDocType = DocumentType.GENERAL_DOCUMENT,
+                        activeSummary = "",
+                        activeRawOcrText = "",
+                        activeFields = emptyList(),
+                        activeTables = emptyList(),
+                        activeConfidence = 0.0f,
+                        activeDiagnosticMessage = "",
                         activeDocId = 0,
                         activeCreatedAt = null,
                         activePdfFile = null,
@@ -499,6 +547,8 @@ class SnapDataViewModel(
                         imageError = null,
                         pdfError = null,
                         pdfImportError = null,
+                        lastExportResult = null,
+                        exportError = null,
                         appOperationState = OperationState.Idle,
                         currentScreen = AppScreen.PREPROCESSING
                     )
@@ -544,6 +594,13 @@ class SnapDataViewModel(
                                 "Imported PDF (1 Page)"
                             },
                             activeHintText = null,
+                            activeDocType = DocumentType.GENERAL_DOCUMENT,
+                            activeSummary = "",
+                            activeRawOcrText = "",
+                            activeFields = emptyList(),
+                            activeTables = emptyList(),
+                            activeConfidence = 0.0f,
+                            activeDiagnosticMessage = "",
                             activeDocId = 0,
                             activeCreatedAt = null,
                             activePageResults = emptyList(),
@@ -551,6 +608,8 @@ class SnapDataViewModel(
                             pdfError = null,
                             pdfImportError = null,
                             acquisitionError = null,
+                            lastExportResult = null,
+                            exportError = null,
                             appOperationState = OperationState.Idle,
                             currentScreen = AppScreen.PREPROCESSING
                         )
@@ -629,11 +688,23 @@ class SnapDataViewModel(
 
         activeProcessingJob?.cancel()
 
+        // Explicit user filter selection can override, otherwise null so OCR/AI accurately classifies
+        val forcedType = state.selectedDocTypeFilter
+
         _uiState.update {
             it.copy(
                 currentScreen = AppScreen.PROCESSING,
                 processingProgress = ProcessingProgress(stage = ProcessingStage.ACQUISITION),
-                appOperationState = OperationState.Processing(stage = ProcessingStage.ACQUISITION, progressPercent = 15, currentStep = 1, totalSteps = 6, detailMessage = "Starting pipeline...")
+                appOperationState = OperationState.Processing(stage = ProcessingStage.ACQUISITION, progressPercent = 15, currentStep = 1, totalSteps = 6, detailMessage = "Starting pipeline..."),
+                // Clean slate for new processing run
+                activeSummary = "",
+                activeRawOcrText = "",
+                activeFields = emptyList(),
+                activeTables = emptyList(),
+                activeConfidence = 0.0f,
+                activeDiagnosticMessage = "",
+                lastExportResult = null,
+                exportError = null
             )
         }
 
@@ -643,7 +714,7 @@ class SnapDataViewModel(
                     context = getApplication(),
                     pdfFile = pdfFile,
                     options = state.processingOptions,
-                    forcedType = if (state.activeDocType != DocumentType.GENERAL_DOCUMENT) state.activeDocType else null
+                    forcedType = forcedType
                 )
             } else {
                 ProcessingPipeline.runPipeline(
@@ -651,7 +722,7 @@ class SnapDataViewModel(
                     inputBitmap = bitmap,
                     options = state.processingOptions,
                     hintOcrText = state.activeHintText,
-                    forcedType = if (state.activeDocType != DocumentType.GENERAL_DOCUMENT) state.activeDocType else null
+                    forcedType = forcedType
                 )
             }
 

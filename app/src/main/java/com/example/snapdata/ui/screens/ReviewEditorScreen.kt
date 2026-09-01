@@ -421,6 +421,9 @@ private fun ReviewOverviewTab(
     uiState: com.example.snapdata.ui.UiState,
     onEditClick: () -> Unit
 ) {
+    val fields = uiState.activeFields
+    val docType = uiState.activeDocType
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -447,7 +450,7 @@ private fun ReviewOverviewTab(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "AI Extracted Matrix • ${uiState.activeFields.size} Fields • ${uiState.activeTables.size} Tables Detected",
+                        text = "AI Extracted Matrix • ${fields.size} Fields • ${uiState.activeTables.size} Tables Detected",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         fontSize = 11.sp
@@ -482,10 +485,14 @@ private fun ReviewOverviewTab(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = when (uiState.activeDocType) {
+                                imageVector = when (docType) {
                                     DocumentType.INVOICE -> Icons.Outlined.Receipt
                                     DocumentType.RECEIPT -> Icons.Outlined.ReceiptLong
                                     DocumentType.BANK_STATEMENT -> Icons.Outlined.AccountBalance
+                                    DocumentType.MARK_SHEET -> Icons.Outlined.School
+                                    DocumentType.ID_CARD -> Icons.Outlined.Badge
+                                    DocumentType.CERTIFICATE -> Icons.Outlined.CardMembership
+                                    DocumentType.FORM -> Icons.Outlined.Assignment
                                     else -> Icons.Outlined.Description
                                 },
                                 contentDescription = null,
@@ -504,7 +511,7 @@ private fun ReviewOverviewTab(
                                 fontSize = 11.sp
                             )
                             Text(
-                                text = uiState.activeDocType.displayName,
+                                text = docType.displayName,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = SnapDataBlack,
@@ -514,14 +521,19 @@ private fun ReviewOverviewTab(
                     }
 
                     // Confidence Score Pill
+                    val confPercent = (uiState.activeConfidence * 100).toInt().coerceIn(0, 100)
+                    val confColor = if (confPercent >= 80) AccentGreen else if (confPercent >= 60) Color(0xFFD97706) else SnapDataRed
+                    val confBg = if (confPercent >= 80) Color(0xFFE6F8F0) else if (confPercent >= 60) Color(0xFFFEF3C7) else Color(0xFFFDE8E8)
+                    val confBorder = if (confPercent >= 80) Color(0xFFA7EAC7) else if (confPercent >= 60) Color(0xFFFCD34D) else Color(0xFFFCA5A5)
+
                     Surface(
-                        color = Color(0xFFE6F8F0),
+                        color = confBg,
                         shape = RoundedCornerShape(20.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7EAC7))
+                        border = androidx.compose.foundation.BorderStroke(1.dp, confBorder)
                     ) {
                         Text(
-                            text = "${(uiState.activeConfidence * 100).toInt()}% Confident",
-                            color = AccentGreen,
+                            text = if (fields.isEmpty() && uiState.activeTables.isEmpty()) "Pending Extraction" else "$confPercent% Confident",
+                            color = confColor,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -531,111 +543,290 @@ private fun ReviewOverviewTab(
             }
         }
 
-        // Vendor Details Card
-        item {
-            val vendorField = uiState.activeFields.find { it.key.contains("vendor", ignoreCase = true) || it.key.contains("merchant", ignoreCase = true) || it.key.contains("company", ignoreCase = true) }
-            val addressField = uiState.activeFields.find { it.key.contains("address", ignoreCase = true) }
-            val emailField = uiState.activeFields.find { it.key.contains("email", ignoreCase = true) }
-            val phoneField = uiState.activeFields.find { it.key.contains("phone", ignoreCase = true) || it.key.contains("tel", ignoreCase = true) }
+        // Type Specific Overview Cards
+        when (docType) {
+            DocumentType.INVOICE, DocumentType.RECEIPT -> {
+                // 1. Vendor Details Card
+                item {
+                    val vendorVal = findVendorName(fields) ?: "Not detected"
+                    val addressVal = findAddress(fields) ?: "Not detected"
+                    val emailVal = findEmail(fields) ?: "Not detected"
+                    val phoneVal = findPhone(fields) ?: "Not detected"
+                    val gstinVal = findGstin(fields)
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
-                    .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardWhite)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "Vendor Details",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = SnapDataBlack,
-                        fontSize = 15.sp
-                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardWhite)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = if (docType == DocumentType.RECEIPT) "Merchant Details" else "Vendor Details",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 15.sp
+                            )
 
-                    Divider(color = SubtleBorder)
+                            Divider(color = SubtleBorder)
 
-                    OverviewDetailRow(
-                        label = "Vendor Name",
-                        value = vendorField?.value ?: "Aarohan Digital Solutions Pvt. Ltd."
-                    )
-                    OverviewDetailRow(
-                        label = "Address",
-                        value = addressField?.value ?: "Office No. 402, Tech Plaza, Andheri East, Mumbai, Maharashtra 400069"
-                    )
-                    OverviewDetailRow(
-                        label = "Email",
-                        value = emailField?.value ?: "billing@aarohandigital.in"
-                    )
-                    OverviewDetailRow(
-                        label = "Phone",
-                        value = phoneField?.value ?: "+91 98765 43210"
-                    )
+                            OverviewDetailRow(
+                                label = if (docType == DocumentType.RECEIPT) "Merchant Name" else "Vendor Name",
+                                value = vendorVal
+                            )
+                            if (gstinVal != null) {
+                                OverviewDetailRow(label = "GSTIN", value = gstinVal)
+                            }
+                            OverviewDetailRow(label = "Address", value = addressVal)
+                            OverviewDetailRow(label = "Email", value = emailVal)
+                            OverviewDetailRow(label = "Phone", value = phoneVal)
+                        }
+                    }
+                }
+
+                // 2. Financial Details Card
+                item {
+                    val docNoVal = findDocumentNumber(fields) ?: "Not detected"
+                    val dateVal = findDate(fields) ?: "Not detected"
+                    val subtotalVal = findSubtotal(fields) ?: "Not detected"
+                    val taxVal = findTaxAmount(fields) ?: "Not detected"
+                    val totalVal = findGrandTotal(fields) ?: "Not detected"
+
+                    val validationWarning = computeFinancialValidationWarning(subtotalVal, taxVal, totalVal)
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardWhite)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = if (docType == DocumentType.RECEIPT) "Receipt Financials" else "Invoice Financials",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 15.sp
+                            )
+
+                            Divider(color = SubtleBorder)
+
+                            OverviewDetailRow(
+                                label = if (docType == DocumentType.RECEIPT) "Receipt No." else "Document No.",
+                                value = docNoVal
+                            )
+                            OverviewDetailRow(label = "Date", value = dateVal)
+                            OverviewDetailRow(label = "Subtotal", value = subtotalVal)
+                            OverviewDetailRow(label = "Taxes (GST/VAT)", value = taxVal)
+
+                            Divider(color = SubtleBorder)
+
+                            OverviewDetailRow(
+                                label = "Total Amount",
+                                value = totalVal,
+                                isHighlight = true
+                            )
+
+                            if (validationWarning != null) {
+                                Surface(
+                                    color = Color(0xFFFFFBEB),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.WarningAmber, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = validationWarning,
+                                            fontSize = 11.sp,
+                                            color = Color(0xFF92400E),
+                                            lineHeight = 15.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-        }
 
-        // Invoice / Document Financial Details Card
-        item {
-            val invNumField = uiState.activeFields.find { it.key.contains("invoice", ignoreCase = true) || it.key.contains("receipt", ignoreCase = true) || it.key.contains("number", ignoreCase = true) }
-            val dateField = uiState.activeFields.find { it.key.contains("date", ignoreCase = true) }
-            val totalField = uiState.activeFields.find { it.key.contains("total", ignoreCase = true) || it.key.contains("amount", ignoreCase = true) }
-            val taxField = uiState.activeFields.find { it.key.contains("tax", ignoreCase = true) || it.key.contains("vat", ignoreCase = true) || it.key.contains("gst", ignoreCase = true) }
-            val subtotalField = uiState.activeFields.find { it.key.contains("subtotal", ignoreCase = true) }
+            DocumentType.MARK_SHEET -> {
+                item {
+                    val studentName = fields.find { it.key.contains("student", true) || it.key.contains("candidate", true) || it.key.contains("name", true) }?.value ?: "Not detected"
+                    val rollNo = fields.find { it.key.contains("roll", true) || it.key.contains("reg", true) || it.key.contains("enroll", true) }?.value ?: "Not detected"
+                    val gpaVal = fields.find { it.key.contains("sgpa", true) || it.key.contains("cgpa", true) || it.key.contains("gpa", true) || it.key.contains("percentage", true) }?.value ?: "Not detected"
+                    val programVal = fields.find { it.key.contains("program", true) || it.key.contains("course", true) || it.key.contains("degree", true) || it.key.contains("branch", true) }?.value ?: "Not detected"
+                    val dateVal = findDate(fields) ?: "Not detected"
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
-                    .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CardWhite)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "Document Details",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = SnapDataBlack,
-                        fontSize = 15.sp
-                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardWhite)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Academic Credentials",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 15.sp
+                            )
+                            Divider(color = SubtleBorder)
+                            OverviewDetailRow(label = "Student Name", value = studentName)
+                            OverviewDetailRow(label = "Registration / Roll No.", value = rollNo)
+                            OverviewDetailRow(label = "Program / Degree", value = programVal)
+                            OverviewDetailRow(label = "Date of Examination", value = dateVal)
+                            Divider(color = SubtleBorder)
+                            OverviewDetailRow(label = "SGPA / CGPA / Grade", value = gpaVal, isHighlight = true)
+                        }
+                    }
+                }
+            }
 
-                    Divider(color = SubtleBorder)
+            DocumentType.BANK_STATEMENT -> {
+                item {
+                    val bankVal = fields.find { it.key.contains("bank", true) || it.key.contains("branch", true) }?.value ?: "Not detected"
+                    val holderVal = fields.find { it.key.contains("holder", true) || it.key.contains("account name", true) || it.key.contains("name", true) }?.value ?: "Not detected"
+                    val accNoVal = fields.find { (it.key.contains("account", true) && it.key.contains("no", true)) || it.key.contains("account number", true) }?.value ?: "Not detected"
+                    val ifscVal = findIfsc(fields) ?: "Not detected"
+                    val balanceVal = fields.find { it.key.contains("balance", true) }?.value ?: "Not detected"
 
-                    OverviewDetailRow(
-                        label = "Document No.",
-                        value = invNumField?.value ?: "INV-2026-84910"
-                    )
-                    OverviewDetailRow(
-                        label = "Date",
-                        value = dateField?.value ?: "31 Aug 2026"
-                    )
-                    OverviewDetailRow(
-                        label = "Subtotal",
-                        value = subtotalField?.value ?: "₹1,20,000.00"
-                    )
-                    OverviewDetailRow(
-                        label = "GST (18%)",
-                        value = taxField?.value ?: "₹21,600.00"
-                    )
-                    Divider(color = SubtleBorder)
-                    OverviewDetailRow(
-                        label = "Total Amount",
-                        value = totalField?.value ?: "₹1,41,600.00",
-                        isHighlight = true
-                    )
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardWhite)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Account & Banking Details",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 15.sp
+                            )
+                            Divider(color = SubtleBorder)
+                            OverviewDetailRow(label = "Bank / Branch", value = bankVal)
+                            OverviewDetailRow(label = "Account Holder", value = holderVal)
+                            OverviewDetailRow(label = "Account Number", value = accNoVal)
+                            OverviewDetailRow(label = "IFSC Code", value = ifscVal)
+                            Divider(color = SubtleBorder)
+                            OverviewDetailRow(label = "Account Balance", value = balanceVal, isHighlight = true)
+                        }
+                    }
+                }
+            }
+
+            DocumentType.ID_CARD -> {
+                item {
+                    val nameVal = fields.find { it.key.contains("name", true) }?.value ?: "Not detected"
+                    val idVal = fields.find { it.key.contains("pan", true) || it.key.contains("aadhaar", true) || it.key.contains("number", true) || it.key.contains("id", true) }?.value ?: "Not detected"
+                    val dobVal = fields.find { it.key.contains("birth", true) || it.key.contains("dob", true) }?.value ?: "Not detected"
+                    val addressVal = findAddress(fields) ?: "Not detected"
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardWhite)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Identity Information",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 15.sp
+                            )
+                            Divider(color = SubtleBorder)
+                            OverviewDetailRow(label = "Full Name", value = nameVal)
+                            OverviewDetailRow(label = "Identifier / Card No.", value = idVal, isHighlight = true)
+                            OverviewDetailRow(label = "Date of Birth", value = dobVal)
+                            OverviewDetailRow(label = "Address / Region", value = addressVal)
+                        }
+                    }
+                }
+            }
+
+            else -> {
+                // General Document Cards
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(1.5.dp, RoundedCornerShape(16.dp), ambientColor = Color(0x06000000))
+                            .border(1.dp, LightBorder, RoundedCornerShape(16.dp)),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = CardWhite)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "Key Document Parameters",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = SnapDataBlack,
+                                fontSize = 15.sp
+                            )
+                            Divider(color = SubtleBorder)
+                            if (fields.isEmpty()) {
+                                Text(
+                                    text = "No structured fields detected in this document.",
+                                    color = TextSecondary,
+                                    fontSize = 13.sp
+                                )
+                            } else {
+                                fields.take(6).forEach { field ->
+                                    OverviewDetailRow(label = field.key, value = field.value)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -644,6 +835,113 @@ private fun ReviewOverviewTab(
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
+}
+
+// --- Helper resolution functions for accurate data mapping ---
+private fun findGrandTotal(fields: List<ExtractedField>): String? {
+    // 1. Exact high-priority matches
+    val exact = fields.find { f ->
+        val k = f.key.trim().lowercase()
+        k == "grand total" || k == "total amount" || k == "total payable" || k == "net payable" ||
+        k == "rounded payable" || k == "final amount" || k == "total (₹)" || k == "total (inr)"
+    }
+    if (exact != null) return exact.value
+
+    // 2. Fallback: match keys with "total" or "amount" but explicitly exclude non-monetary metrics
+    return fields.find { f ->
+        val k = f.key.trim().lowercase()
+        (k.contains("total") || k.contains("payable") || (k.contains("amount") && !k.contains("tax") && !k.contains("subtotal"))) &&
+        !k.contains("qty") && !k.contains("quantity") && !k.contains("item") && !k.contains("unit") &&
+        !k.contains("credit") && !k.contains("hour") && !k.contains("day") && !k.contains("weight") &&
+        !k.contains("count") && !k.contains("discount") && !k.contains("taxable") && !k.contains("subtotal") && !k.contains("sub total")
+    }?.value
+}
+
+private fun findSubtotal(fields: List<ExtractedField>): String? {
+    return fields.find { f ->
+        val k = f.key.trim().lowercase()
+        k.contains("subtotal") || k.contains("sub total") || k.contains("taxable value") || k.contains("taxable amount")
+    }?.value
+}
+
+private fun findTaxAmount(fields: List<ExtractedField>): String? {
+    val cgst = fields.find { it.key.contains("cgst", true) }
+    val sgst = fields.find { it.key.contains("sgst", true) }
+    val igst = fields.find { it.key.contains("igst", true) }
+    val gst = fields.find { f ->
+        val k = f.key.trim().lowercase()
+        (k.contains("gst") && !k.contains("gstin")) || k.contains("tax amount") || (k.contains("tax") && !k.contains("tax invoice") && !k.contains("taxable"))
+    }
+
+    return when {
+        cgst != null && sgst != null -> "${cgst.value} (CGST) + ${sgst.value} (SGST)"
+        igst != null -> "${igst.value} (IGST)"
+        gst != null -> gst.value
+        else -> null
+    }
+}
+
+private fun findDocumentNumber(fields: List<ExtractedField>): String? {
+    return fields.find { f ->
+        val k = f.key.trim().lowercase()
+        k.contains("invoice no") || k.contains("invoice #") || k.contains("invoice number") ||
+        k.contains("bill no") || k.contains("receipt no") || k.contains("challan no") ||
+        k.contains("document no") || k.contains("order no")
+    }?.value
+}
+
+private fun findDate(fields: List<ExtractedField>): String? {
+    return fields.find { f ->
+        val k = f.key.trim().lowercase()
+        (k.contains("date") || k.contains("dated") || k.contains("dt")) && !k.contains("due")
+    }?.value
+}
+
+private fun findVendorName(fields: List<ExtractedField>): String? {
+    return fields.find { f ->
+        val k = f.key.trim().lowercase()
+        k.contains("vendor") || k.contains("merchant") || k.contains("store name") ||
+        k.contains("seller") || k.contains("billed from") || k.contains("company") || k.contains("firm")
+    }?.value
+}
+
+private fun findGstin(fields: List<ExtractedField>): String? {
+    return fields.find { it.key.contains("gstin", true) }?.value
+}
+
+private fun findIfsc(fields: List<ExtractedField>): String? {
+    return fields.find { it.key.contains("ifsc", true) }?.value
+}
+
+private fun findAddress(fields: List<ExtractedField>): String? {
+    return fields.find { it.key.contains("address", true) || it.key.contains("location", true) }?.value
+}
+
+private fun findEmail(fields: List<ExtractedField>): String? {
+    return fields.find { it.key.contains("email", true) }?.value
+}
+
+private fun findPhone(fields: List<ExtractedField>): String? {
+    return fields.find { f ->
+        val k = f.key.trim().lowercase()
+        k.contains("phone") || k.contains("mobile") || k.contains("tel") || k.contains("contact")
+    }?.value
+}
+
+private fun computeFinancialValidationWarning(subtotalStr: String, taxStr: String, totalStr: String): String? {
+    if (subtotalStr == "Not detected" || totalStr == "Not detected") return null
+    fun cleanNum(s: String): Double? {
+        val digits = s.replace(Regex("[^0-9.]"), "")
+        return digits.toDoubleOrNull()
+    }
+    val sub = cleanNum(subtotalStr) ?: return null
+    val tot = cleanNum(totalStr) ?: return null
+
+    // If total is wildly smaller than subtotal (e.g. Total = 20 vs Subtotal = 120000)
+    if (tot < sub * 0.5) {
+        return "Possible extraction conflict: Detected total ($totalStr) is significantly lower than subtotal ($subtotalStr). Please verify and edit if necessary."
+    }
+    return null
 }
 
 @Composable

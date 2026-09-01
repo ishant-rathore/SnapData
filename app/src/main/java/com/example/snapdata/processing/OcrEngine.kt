@@ -363,18 +363,42 @@ object OcrEngine {
                     )
                 }
 
+                // Non-Financial Quantity / Item Totals (disambiguate from Grand Total)
+                line.contains("Total Qty", ignoreCase = true) || line.contains("Total Quantity", ignoreCase = true) || line.contains("Item Count", ignoreCase = true) || line.contains("Net Qty", ignoreCase = true) || line.contains("Total Items", ignoreCase = true) || line.contains("Total Units", ignoreCase = true) || line.contains("Total Credits", ignoreCase = true) -> {
+                    val key = when {
+                        line.contains("Qty", ignoreCase = true) || line.contains("Quantity", ignoreCase = true) -> "Total Quantity"
+                        line.contains("Item", ignoreCase = true) -> "Total Items"
+                        line.contains("Credit", ignoreCase = true) -> "Total Credits"
+                        else -> "Total Units"
+                    }
+                    val cleanedVal = extractNumericValueOrFullLine(line, key)
+                    fields.add(ExtractedField(key = key, value = cleanedVal, confidence = 0.94f, category = "General", confidenceSource = ConfidenceSource.HEURISTIC))
+                }
+
                 // Financial Totals
-                line.contains("Grand Total", ignoreCase = true) || line.contains("Total Amount", ignoreCase = true) || line.matches(Regex("(?i)^Total\\b.*")) -> {
+                line.contains("Grand Total", ignoreCase = true) || line.contains("Total Amount", ignoreCase = true) || line.contains("Total Payable", ignoreCase = true) || line.contains("Net Payable", ignoreCase = true) || line.contains("Rounded Payable", ignoreCase = true) || line.matches(Regex("(?i)^\\s*total\\s*[:=₹Rs$€£].*")) || line.matches(Regex("(?i)^\\s*total\\s+[₹Rs$€£]?\\s*[\\d,]+(\\.\\d{2})?\\s*$")) -> {
                     val cleanedVal = extractNumericValueOrFullLine(line, "Total")
-                    fields.add(ExtractedField(key = "Grand Total", value = cleanedVal, confidence = 0.95f, category = "Financial", confidenceSource = ConfidenceSource.HEURISTIC))
+                    fields.add(ExtractedField(key = "Grand Total", value = cleanedVal, confidence = 0.98f, category = "Financial", confidenceSource = ConfidenceSource.HEURISTIC))
                 }
-                line.contains("Subtotal", ignoreCase = true) || line.contains("Sub Total", ignoreCase = true) -> {
+                line.contains("Subtotal", ignoreCase = true) || line.contains("Sub Total", ignoreCase = true) || line.contains("Taxable Value", ignoreCase = true) || line.contains("Taxable Amount", ignoreCase = true) -> {
                     val cleanedVal = extractNumericValueOrFullLine(line, "Subtotal")
-                    fields.add(ExtractedField(key = "Subtotal", value = cleanedVal, confidence = 0.94f, category = "Financial", confidenceSource = ConfidenceSource.HEURISTIC))
+                    fields.add(ExtractedField(key = "Subtotal", value = cleanedVal, confidence = 0.96f, category = "Financial", confidenceSource = ConfidenceSource.HEURISTIC))
                 }
-                line.contains("Tax", ignoreCase = true) || line.contains("VAT", ignoreCase = true) || line.contains("GST", ignoreCase = true) -> {
+                line.contains("CGST", ignoreCase = true) -> {
+                    val cleanedVal = extractNumericValueOrFullLine(line, "CGST")
+                    fields.add(ExtractedField(key = "CGST", value = cleanedVal, confidence = 0.95f, category = "Tax", confidenceSource = ConfidenceSource.HEURISTIC))
+                }
+                line.contains("SGST", ignoreCase = true) -> {
+                    val cleanedVal = extractNumericValueOrFullLine(line, "SGST")
+                    fields.add(ExtractedField(key = "SGST", value = cleanedVal, confidence = 0.95f, category = "Tax", confidenceSource = ConfidenceSource.HEURISTIC))
+                }
+                line.contains("IGST", ignoreCase = true) -> {
+                    val cleanedVal = extractNumericValueOrFullLine(line, "IGST")
+                    fields.add(ExtractedField(key = "IGST", value = cleanedVal, confidence = 0.95f, category = "Tax", confidenceSource = ConfidenceSource.HEURISTIC))
+                }
+                (line.contains("Tax", ignoreCase = true) || line.contains("VAT", ignoreCase = true) || line.contains("GST", ignoreCase = true)) && !line.contains("Tax Invoice", ignoreCase = true) && !line.contains("Taxable", ignoreCase = true) -> {
                     val cleanedVal = extractNumericValueOrFullLine(line, "Tax")
-                    fields.add(ExtractedField(key = "Tax / VAT / GST", value = cleanedVal, confidence = 0.92f, category = "Financial", confidenceSource = ConfidenceSource.HEURISTIC))
+                    fields.add(ExtractedField(key = "Tax Amount", value = cleanedVal, confidence = 0.94f, category = "Tax", confidenceSource = ConfidenceSource.HEURISTIC))
                 }
                 line.contains("Discount", ignoreCase = true) -> {
                     val cleanedVal = extractNumericValueOrFullLine(line, "Discount")
@@ -382,16 +406,16 @@ object OcrEngine {
                 }
                 line.contains("Due Date", ignoreCase = true) -> {
                     val cleanedVal = extractNumericValueOrFullLine(line, "Due Date")
-                    fields.add(ExtractedField(key = "Due Date", value = cleanedVal, confidence = 0.93f, category = "Temporal", confidenceSource = ConfidenceSource.HEURISTIC))
+                    fields.add(ExtractedField(key = "Due Date", value = cleanedVal, confidence = 0.95f, category = "Temporal", confidenceSource = ConfidenceSource.HEURISTIC))
                 }
                 line.contains("Date", ignoreCase = true) || line.matches(Regex(".*\\b\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}\\b.*")) -> {
-                    if (!fields.any { it.key.equals("Date", ignoreCase = true) }) {
-                        fields.add(ExtractedField(key = "Date", value = line, confidence = 0.93f, category = "Temporal", confidenceSource = ConfidenceSource.HEURISTIC))
+                    if (!fields.any { it.key.equals("Date", ignoreCase = true) || it.key.equals("Document Date", ignoreCase = true) }) {
+                        fields.add(ExtractedField(key = "Document Date", value = line, confidence = 0.94f, category = "Temporal", confidenceSource = ConfidenceSource.HEURISTIC))
                     }
                 }
-                line.contains("Invoice", ignoreCase = true) && line.matches(Regex(".*\\d+.*")) -> {
-                    if (!fields.any { it.key.contains("Invoice", ignoreCase = true) }) {
-                        fields.add(ExtractedField(key = "Invoice / Ref Number", value = line, confidence = 0.95f, category = "Identifier", confidenceSource = ConfidenceSource.HEURISTIC))
+                (line.contains("Invoice", ignoreCase = true) || line.contains("Bill No", ignoreCase = true)) && line.matches(Regex(".*\\d+.*")) -> {
+                    if (!fields.any { it.key.contains("Invoice", ignoreCase = true) || it.key.contains("Bill No", ignoreCase = true) }) {
+                        fields.add(ExtractedField(key = "Invoice No", value = line, confidence = 0.96f, category = "Identifier", confidenceSource = ConfidenceSource.HEURISTIC))
                     }
                 }
                 line.contains("Account", ignoreCase = true) && line.matches(Regex(".*\\d+.*")) -> {
@@ -578,18 +602,66 @@ object OcrEngine {
 
     private fun classifyDocumentType(lines: List<String>): DocumentType {
         val fullText = lines.joinToString(" ").lowercase()
-        return when {
-            fullText.contains("tax invoice") || fullText.contains("invoice #") || fullText.contains("invoice no") || fullText.contains("bill to") || fullText.contains("invoice date") || fullText.contains("gstin") || fullText.contains("चालान") || (fullText.contains("invoice") && fullText.contains("total")) -> DocumentType.INVOICE
-            fullText.contains("receipt") || fullText.contains("cashier") || fullText.contains("change due") || fullText.contains("pos terminal") || fullText.contains("रसीद") || (fullText.contains("subtotal") && fullText.contains("tax") && fullText.contains("cash")) -> DocumentType.RECEIPT
-            fullText.contains("statement of account") || fullText.contains("bank statement") || fullText.contains("balance forward") || fullText.contains("account balance") || fullText.contains("credit balance") || fullText.contains("closing balance") || fullText.contains("खाता") || fullText.contains("ifsc") -> DocumentType.BANK_STATEMENT
-            fullText.contains("application form") || fullText.contains("registration form") || fullText.contains("date of birth") || fullText.contains("applicant signature") || fullText.contains("kyc form") || fullText.contains("[x]") || fullText.contains("[ ]") -> DocumentType.FORM
-            fullText.contains("certificate of") || fullText.contains("hereby certifies") || fullText.contains("awarded to") || fullText.contains("in witness whereof") || fullText.contains("conferred upon") || fullText.contains("प्रमाण पत्र") -> DocumentType.CERTIFICATE
-            fullText.contains("grade point") || fullText.contains("marksheet") || fullText.contains("mark sheet") || fullText.contains("transcript of records") || fullText.contains("semester") || fullText.contains("sgpa") || fullText.contains("cgpa") || fullText.contains("अंकतालिका") -> DocumentType.MARK_SHEET
-            fullText.contains("identity card") || fullText.contains("driving license") || fullText.contains("driver license") || fullText.contains("id no") || fullText.contains("passport") || fullText.contains("national identity") || fullText.contains("aadhaar") || fullText.contains("pan card") || fullText.contains("voter id") -> DocumentType.ID_CARD
-            fullText.contains("business card") || (fullText.contains("tel:") && fullText.contains("@") && fullText.contains("www.")) || (fullText.contains("mobile:") && fullText.contains("@")) -> DocumentType.BUSINESS_CARD
-            fullText.contains("|") || fullText.contains("columns") || fullText.contains("table") -> DocumentType.TABLE
-            else -> DocumentType.GENERAL_DOCUMENT
-        }
+        val logits = mutableMapOf<DocumentType, Float>()
+        for (t in DocumentType.entries) logits[t] = 0f
+        fun score(t: DocumentType, pts: Float) { logits[t] = (logits[t] ?: 0f) + pts }
+
+        // 1. INVOICE
+        if (fullText.contains("tax invoice") || fullText.contains("कराधान चालान") || fullText.contains("चालान")) score(DocumentType.INVOICE, 9.0f)
+        if (fullText.contains("invoice no") || fullText.contains("invoice #") || fullText.contains("invoice number") || fullText.contains("invoice date")) score(DocumentType.INVOICE, 6.0f)
+        if (fullText.contains("bill to") || fullText.contains("billed to") || fullText.contains("consignee") || fullText.contains("ship to")) score(DocumentType.INVOICE, 5.0f)
+        if (fullText.contains("hsn") || fullText.contains("sac code") || fullText.contains("hsn/sac")) score(DocumentType.INVOICE, 5.0f)
+        if (fullText.contains("subtotal") || fullText.contains("sub total") || fullText.contains("taxable value") || fullText.contains("taxable amount")) score(DocumentType.INVOICE, 4.0f)
+        if (fullText.contains("cgst") || fullText.contains("sgst") || fullText.contains("igst")) score(DocumentType.INVOICE, 5.0f)
+        if (fullText.contains("gstin") && !fullText.contains("cashier") && !fullText.contains("pos terminal")) score(DocumentType.INVOICE, 4.0f)
+        if (fullText.contains("due date") || fullText.contains("po no") || fullText.contains("purchase order")) score(DocumentType.INVOICE, 3.5f)
+        if (fullText.contains("invoice") && (fullText.contains("total") || fullText.contains("₹") || fullText.contains("rs"))) score(DocumentType.INVOICE, 4.0f)
+
+        // 2. RECEIPT
+        if (fullText.contains("receipt") || fullText.contains("pos bill") || fullText.contains("retail bill") || fullText.contains("रसीद")) score(DocumentType.RECEIPT, 8.0f)
+        if (fullText.contains("cashier") || fullText.contains("pos terminal") || fullText.contains("change due") || fullText.contains("counter #")) score(DocumentType.RECEIPT, 7.0f)
+        if (fullText.contains("store #") || fullText.contains("supermarket") || fullText.contains("retail private limited") || fullText.contains("hypermarket")) score(DocumentType.RECEIPT, 5.5f)
+        if (fullText.contains("payment mode") || fullText.contains("upi ref") || fullText.contains("gpay") || fullText.contains("phonepe") || fullText.contains("paytm")) score(DocumentType.RECEIPT, 5.0f)
+        if (fullText.contains("item count") || fullText.contains("net qty") || fullText.contains("thank you")) score(DocumentType.RECEIPT, 4.0f)
+
+        // 3. BANK_STATEMENT
+        if (fullText.contains("statement of account") || fullText.contains("bank statement") || fullText.contains("account statement") || fullText.contains("खाता विवरण")) score(DocumentType.BANK_STATEMENT, 9.0f)
+        if (fullText.contains("state bank") || fullText.contains("hdfc bank") || fullText.contains("icici bank") || fullText.contains("axis bank") || fullText.contains("bank of baroda")) score(DocumentType.BANK_STATEMENT, 6.0f)
+        if (fullText.contains("ifsc") || fullText.contains("ifsc code") || fullText.contains("micr code")) score(DocumentType.BANK_STATEMENT, 6.0f)
+        if (fullText.contains("account number") || fullText.contains("account no") || fullText.contains("savings bank account")) score(DocumentType.BANK_STATEMENT, 5.5f)
+        if (fullText.contains("closing balance") || fullText.contains("opening balance") || fullText.contains("ledger balance")) score(DocumentType.BANK_STATEMENT, 6.0f)
+        if ((fullText.contains("debit") || fullText.contains("dr.")) && (fullText.contains("credit") || fullText.contains("cr."))) score(DocumentType.BANK_STATEMENT, 5.0f)
+
+        // 4. MARK_SHEET
+        if (fullText.contains("statement of marks") || fullText.contains("marksheet") || fullText.contains("mark sheet") || fullText.contains("grade card") || fullText.contains("transcript of records") || fullText.contains("अंकतालिका")) score(DocumentType.MARK_SHEET, 9.0f)
+        if (fullText.contains("sgpa") || fullText.contains("cgpa") || fullText.contains("semester gpa") || fullText.contains("cumulative gpa")) score(DocumentType.MARK_SHEET, 7.0f)
+        if ((fullText.contains("roll no") || fullText.contains("roll number") || fullText.contains("enrollment no") || fullText.contains("hall ticket")) && (fullText.contains("marks") || fullText.contains("semester") || fullText.contains("grade"))) score(DocumentType.MARK_SHEET, 6.0f)
+        if (fullText.contains("controller of examinations") || fullText.contains("passing criteria") || fullText.contains("grade points")) score(DocumentType.MARK_SHEET, 5.0f)
+        if (fullText.contains("marks obtained") || fullText.contains("maximum marks")) score(DocumentType.MARK_SHEET, 6.0f)
+
+        // 5. CERTIFICATE
+        if (fullText.contains("certificate of") || fullText.contains("hereby certifies") || fullText.contains("awarded to") || fullText.contains("conferred upon") || fullText.contains("प्रमाण पत्र")) score(DocumentType.CERTIFICATE, 9.0f)
+        if (fullText.contains("has successfully completed") || fullText.contains("certificate of achievement")) score(DocumentType.CERTIFICATE, 6.0f)
+
+        // 6. FORM
+        if (fullText.contains("application form") || fullText.contains("registration form") || fullText.contains("kyc form") || fullText.contains("admission form") || fullText.contains("आवेदन पत्र")) score(DocumentType.FORM, 9.0f)
+        if (fullText.contains("date of birth") || fullText.contains("father's name") || fullText.contains("applicant signature")) score(DocumentType.FORM, 5.0f)
+        if (fullText.contains("[x]") || fullText.contains("[ ]") || fullText.contains("(x)")) score(DocumentType.FORM, 4.0f)
+
+        // 7. ID_CARD
+        if (fullText.contains("identity card") || fullText.contains("driving licence") || fullText.contains("driving license") || fullText.contains("voter id") || fullText.contains("aadhaar") || fullText.contains("passport") || fullText.contains("पहचान पत्र")) score(DocumentType.ID_CARD, 9.0f)
+        if (fullText.contains("govt of india") || fullText.contains("permanent account number") || fullText.contains("pan card") || fullText.contains("unique identification")) score(DocumentType.ID_CARD, 6.0f)
+
+        // 8. BUSINESS_CARD
+        if (fullText.contains("business card") || (lines.size <= 8 && fullText.contains("@") && (fullText.contains("+91") || fullText.contains("tel:")))) score(DocumentType.BUSINESS_CARD, 6.0f)
+
+        // 9. TABLE
+        if (lines.count { it.contains("|") || it.contains("\t") } >= 4 && logits.values.all { it < 4.0f }) score(DocumentType.TABLE, 5.0f)
+
+        // 10. GENERAL_DOCUMENT
+        score(DocumentType.GENERAL_DOCUMENT, 0.5f)
+
+        return logits.maxByOrNull { it.value }?.key ?: DocumentType.GENERAL_DOCUMENT
     }
 
     private fun determineCategory(key: String, docType: DocumentType): String {

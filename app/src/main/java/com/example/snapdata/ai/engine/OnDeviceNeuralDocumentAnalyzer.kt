@@ -205,59 +205,63 @@ class OnDeviceNeuralDocumentAnalyzer private constructor() : OfflineAiEngine {
             logits[type] = (logits[type] ?: 0f) + points
         }
 
-        // 1. INVOICE
-        if (lowerText.contains("tax invoice") || lowerText.contains("चालान")) score(DocumentType.INVOICE, 7.0f)
-        if (lowerText.contains("invoice no") || lowerText.contains("invoice #") || lowerText.contains("invoice date")) score(DocumentType.INVOICE, 4.0f)
-        if (lowerText.contains("bill to") || lowerText.contains("billed to")) score(DocumentType.INVOICE, 4.0f)
-        if (lowerText.contains("hsn") || lowerText.contains("sac")) score(DocumentType.INVOICE, 3.0f)
-        if (lowerText.contains("due date")) score(DocumentType.INVOICE, 2.5f)
-        if (lowerText.contains("gstin") && !lowerText.contains("cashier") && !lowerText.contains("pos")) score(DocumentType.INVOICE, 3.0f)
+        // 1. INVOICE (Weighted Indian & Global Invoice Evidence)
+        if (lowerText.contains("tax invoice") || lowerText.contains("कराधान चालान") || lowerText.contains("चालान")) score(DocumentType.INVOICE, 9.0f)
+        if (lowerText.contains("invoice no") || lowerText.contains("invoice #") || lowerText.contains("invoice number") || lowerText.contains("invoice date")) score(DocumentType.INVOICE, 6.0f)
+        if (lowerText.contains("bill to") || lowerText.contains("billed to") || lowerText.contains("ship to") || lowerText.contains("shipped to") || lowerText.contains("consignee")) score(DocumentType.INVOICE, 5.0f)
+        if (lowerText.contains("hsn") || lowerText.contains("sac code") || lowerText.contains("hsn/sac")) score(DocumentType.INVOICE, 5.0f)
+        if (lowerText.contains("subtotal") || lowerText.contains("sub total") || lowerText.contains("taxable value") || lowerText.contains("taxable amount")) score(DocumentType.INVOICE, 4.0f)
+        if (lowerText.contains("cgst") || lowerText.contains("sgst") || lowerText.contains("igst")) score(DocumentType.INVOICE, 5.0f)
+        if (lowerText.contains("due date") || lowerText.contains("payment terms") || lowerText.contains("po no") || lowerText.contains("purchase order")) score(DocumentType.INVOICE, 3.5f)
+        if (lowerText.contains("gstin") && !lowerText.contains("cashier") && !lowerText.contains("pos terminal")) score(DocumentType.INVOICE, 4.0f)
+        if (lowerText.contains("amount in words") || lowerText.contains("authorized signatory")) score(DocumentType.INVOICE, 3.0f)
+        if (lowerText.contains("invoice") && (lowerText.contains("total") || lowerText.contains("₹") || lowerText.contains("rs"))) score(DocumentType.INVOICE, 4.0f)
 
         // 2. RECEIPT
-        if (lowerText.contains("receipt") || lowerText.contains("pos bill") || lowerText.contains("retail bill")) score(DocumentType.RECEIPT, 7.0f)
-        if (lowerText.contains("cashier") || lowerText.contains("pos terminal") || lowerText.contains("change due")) score(DocumentType.RECEIPT, 6.0f)
-        if (lowerText.contains("bill no") || lowerText.contains("store #") || lowerText.contains("supermarket") || lowerText.contains("retail private limited")) score(DocumentType.RECEIPT, 5.0f)
-        if (lowerText.contains("payment mode") || lowerText.contains("upi ref") || lowerText.contains("gpay")) score(DocumentType.RECEIPT, 4.0f)
-        if (lowerText.contains("item count") || lowerText.contains("net qty") || lowerText.contains("thank you")) score(DocumentType.RECEIPT, 3.5f)
+        if (lowerText.contains("receipt") || lowerText.contains("pos bill") || lowerText.contains("retail bill") || lowerText.contains("रसीद")) score(DocumentType.RECEIPT, 8.0f)
+        if (lowerText.contains("cashier") || lowerText.contains("pos terminal") || lowerText.contains("change due") || lowerText.contains("counter #")) score(DocumentType.RECEIPT, 7.0f)
+        if (lowerText.contains("store #") || lowerText.contains("supermarket") || lowerText.contains("retail private limited") || lowerText.contains("hypermarket")) score(DocumentType.RECEIPT, 5.5f)
+        if (lowerText.contains("payment mode") || lowerText.contains("upi ref") || lowerText.contains("gpay") || lowerText.contains("phonepe") || lowerText.contains("paytm") || lowerText.contains("card ending")) score(DocumentType.RECEIPT, 5.0f)
+        if (lowerText.contains("item count") || lowerText.contains("net qty") || lowerText.contains("thank you for shopping") || lowerText.contains("visit again")) score(DocumentType.RECEIPT, 4.5f)
 
         // 3. BANK_STATEMENT
-        if (lowerText.contains("statement of account") || lowerText.contains("bank statement") || lowerText.contains("account statement")) score(DocumentType.BANK_STATEMENT, 8.0f)
-        if (lowerText.contains("bank") || lowerText.contains("state bank") || lowerText.contains("hdfc") || lowerText.contains("icici") || lowerText.contains("axis")) score(DocumentType.BANK_STATEMENT, 4.5f)
-        if (lowerText.contains("ifsc") || lowerText.contains("micr")) score(DocumentType.BANK_STATEMENT, 5.5f)
-        if (lowerText.contains("account number") || lowerText.contains("account type") || lowerText.contains("savings bank account")) score(DocumentType.BANK_STATEMENT, 5.0f)
-        if (lowerText.contains("closing balance") || lowerText.contains("opening balance") || lowerText.contains("ledger balance")) score(DocumentType.BANK_STATEMENT, 5.5f)
-        if (lowerText.contains("debit") && lowerText.contains("credit")) score(DocumentType.BANK_STATEMENT, 4.5f)
-        if (lowerText.contains("statement period")) score(DocumentType.BANK_STATEMENT, 4.0f)
+        if (lowerText.contains("statement of account") || lowerText.contains("bank statement") || lowerText.contains("account statement") || lowerText.contains("खाता विवरण")) score(DocumentType.BANK_STATEMENT, 9.0f)
+        if (lowerText.contains("state bank") || lowerText.contains("hdfc bank") || lowerText.contains("icici bank") || lowerText.contains("axis bank") || lowerText.contains("punjab national bank") || lowerText.contains("canara bank")) score(DocumentType.BANK_STATEMENT, 6.0f)
+        if (lowerText.contains("ifsc") || lowerText.contains("ifsc code") || lowerText.contains("micr code")) score(DocumentType.BANK_STATEMENT, 6.0f)
+        if (lowerText.contains("account number") || lowerText.contains("account no") || lowerText.contains("savings bank account") || lowerText.contains("current account")) score(DocumentType.BANK_STATEMENT, 5.5f)
+        if (lowerText.contains("closing balance") || lowerText.contains("opening balance") || lowerText.contains("ledger balance") || lowerText.contains("available balance")) score(DocumentType.BANK_STATEMENT, 6.0f)
+        if ((lowerText.contains("debit") || lowerText.contains("dr.")) && (lowerText.contains("credit") || lowerText.contains("cr."))) score(DocumentType.BANK_STATEMENT, 5.0f)
+        if (lowerText.contains("statement period") || lowerText.contains("transaction details") || lowerText.contains("value date")) score(DocumentType.BANK_STATEMENT, 4.5f)
 
-        // 4. MARK_SHEET
-        if (lowerText.contains("statement of marks") || lowerText.contains("marksheet") || lowerText.contains("mark sheet") || lowerText.contains("grade card") || lowerText.contains("transcript")) score(DocumentType.MARK_SHEET, 8.0f)
-        if (lowerText.contains("sgpa") || lowerText.contains("cgpa") || lowerText.contains("gpa")) score(DocumentType.MARK_SHEET, 6.0f)
-        if (lowerText.contains("roll no") || lowerText.contains("registration no") || lowerText.contains("candidate name")) score(DocumentType.MARK_SHEET, 4.5f)
-        if (lowerText.contains("semester") || lowerText.contains("examination") || lowerText.contains("subject code") || lowerText.contains("course title")) score(DocumentType.MARK_SHEET, 5.0f)
-        if (lowerText.contains("controller of examinations") || lowerText.contains("distinction") || lowerText.contains("credits")) score(DocumentType.MARK_SHEET, 4.0f)
+        // 4. MARK_SHEET (Requires Distinct Academic Credentials)
+        if (lowerText.contains("statement of marks") || lowerText.contains("marksheet") || lowerText.contains("mark sheet") || lowerText.contains("grade card") || lowerText.contains("transcript of records") || lowerText.contains("अंकतालिका")) score(DocumentType.MARK_SHEET, 9.0f)
+        if (lowerText.contains("sgpa") || lowerText.contains("cgpa") || lowerText.contains("semester gpa") || lowerText.contains("cumulative gpa")) score(DocumentType.MARK_SHEET, 7.0f)
+        if ((lowerText.contains("roll no") || lowerText.contains("roll number") || lowerText.contains("enrollment no") || lowerText.contains("hall ticket")) && (lowerText.contains("marks") || lowerText.contains("semester") || lowerText.contains("grade"))) score(DocumentType.MARK_SHEET, 6.0f)
+        if (lowerText.contains("controller of examinations") || lowerText.contains("passing criteria") || lowerText.contains("course credits") || lowerText.contains("grade points")) score(DocumentType.MARK_SHEET, 5.0f)
+        if (lowerText.contains("marks obtained") || lowerText.contains("maximum marks") || lowerText.contains("theory marks") || lowerText.contains("practical marks")) score(DocumentType.MARK_SHEET, 6.0f)
 
         // 5. CERTIFICATE
-        if (lowerText.contains("certificate of") || lowerText.contains("hereby certifies") || lowerText.contains("awarded to") || lowerText.contains("conferred upon") || lowerText.contains("in recognition of")) score(DocumentType.CERTIFICATE, 8.0f)
-        if (lowerText.contains("has successfully completed") || lowerText.contains("achievement") || lowerText.contains("excellence")) score(DocumentType.CERTIFICATE, 4.5f)
+        if (lowerText.contains("certificate of") || lowerText.contains("hereby certifies") || lowerText.contains("awarded to") || lowerText.contains("conferred upon") || lowerText.contains("in recognition of") || lowerText.contains("प्रमाण पत्र")) score(DocumentType.CERTIFICATE, 9.0f)
+        if (lowerText.contains("has successfully completed") || lowerText.contains("certificate of achievement") || lowerText.contains("certificate of appreciation")) score(DocumentType.CERTIFICATE, 6.0f)
 
         // 6. FORM
-        if (lowerText.contains("application form") || lowerText.contains("registration form") || lowerText.contains("kyc form") || lowerText.contains("admission form")) score(DocumentType.FORM, 8.0f)
-        if (lowerText.contains("date of birth") || lowerText.contains("father's name") || lowerText.contains("applicant signature") || lowerText.contains("declaration")) score(DocumentType.FORM, 4.5f)
+        if (lowerText.contains("application form") || lowerText.contains("registration form") || lowerText.contains("kyc form") || lowerText.contains("admission form") || lowerText.contains("आवेदन पत्र")) score(DocumentType.FORM, 9.0f)
+        if (lowerText.contains("date of birth") || lowerText.contains("father's name") || lowerText.contains("mother's name") || lowerText.contains("applicant signature") || lowerText.contains("declaration:")) score(DocumentType.FORM, 5.0f)
         if (lowerText.contains("[x]") || lowerText.contains("[ ]") || lowerText.contains("(x)")) score(DocumentType.FORM, 4.0f)
 
         // 7. ID_CARD
-        if (lowerText.contains("identity card") || lowerText.contains("driving licence") || lowerText.contains("driving license") || lowerText.contains("voter id") || lowerText.contains("aadhaar") || lowerText.contains("passport")) score(DocumentType.ID_CARD, 8.0f)
-        if (lowerText.contains("govt of india") || lowerText.contains("income tax department") || lowerText.contains("unique identification")) score(DocumentType.ID_CARD, 5.5f)
-        if (lowerText.contains("dob:") || lowerText.contains("gender:") || (lowerText.contains("male") && lowerText.contains("card"))) score(DocumentType.ID_CARD, 3.5f)
+        if (lowerText.contains("identity card") || lowerText.contains("driving licence") || lowerText.contains("driving license") || lowerText.contains("voter id") || lowerText.contains("aadhaar") || lowerText.contains("passport") || lowerText.contains("पहचान पत्र")) score(DocumentType.ID_CARD, 9.0f)
+        if (lowerText.contains("govt of india") || lowerText.contains("government of india") || lowerText.contains("income tax department") || lowerText.contains("unique identification authority")) score(DocumentType.ID_CARD, 6.0f)
+        if (lowerText.contains("permanent account number") || lowerText.contains("pan card") || lowerText.contains("election commission")) score(DocumentType.ID_CARD, 7.0f)
 
         // 8. BUSINESS_CARD
-        if (lowerText.contains("business card") || (lines.size <= 8 && lowerText.contains("@") && (lowerText.contains("+91") || lowerText.contains("tel:")))) score(DocumentType.BUSINESS_CARD, 6.0f)
+        if (lowerText.contains("business card") || (lines.size <= 8 && lowerText.contains("@") && (lowerText.contains("+91") || lowerText.contains("tel:") || lowerText.contains("mob:")))) score(DocumentType.BUSINESS_CARD, 6.0f)
 
         // 9. TABLE
-        if (lines.count { it.contains("|") || it.contains("\t") } >= 4 && logits.values.all { it < 3.0f }) score(DocumentType.TABLE, 5.0f)
+        if (lines.count { it.contains("|") || it.contains("\t") } >= 4 && logits.values.all { it < 4.0f }) score(DocumentType.TABLE, 5.0f)
 
         // 10. GENERAL_DOCUMENT
-        score(DocumentType.GENERAL_DOCUMENT, 1.0f)
+        score(DocumentType.GENERAL_DOCUMENT, 0.5f)
 
         // Compute Softmax probabilities
         val maxLogit = logits.values.maxOrNull() ?: 0f
@@ -389,12 +393,47 @@ class OnDeviceNeuralDocumentAnalyzer private constructor() : OfflineAiEngine {
             )
         }
 
-        // 5. Grand Total / Total Amount (₹ / Rs / $)
-        if (lower.contains("grand total") || lower.contains("total amount") || lower.matches(Regex("(?i)^total\\b.*"))) {
+        // 5. Quantity / Item / Hours totals (Non-financial, to prevent confusing with Grand Total)
+        if (lower.contains("total qty") || lower.contains("total quantity") || lower.contains("item count") || lower.contains("net qty") || lower.contains("total items") || lower.contains("total units") || lower.contains("total credits") || lower.contains("total hours")) {
+            val amount = extractAmount(line)
+            val key = when {
+                lower.contains("qty") || lower.contains("quantity") -> "Total Quantity"
+                lower.contains("item") -> "Total Items"
+                lower.contains("credit") -> "Total Credits"
+                lower.contains("hour") -> "Total Hours"
+                else -> "Total Units"
+            }
+            if (amount.isNotBlank()) {
+                return ExtractedField(
+                    key = key,
+                    value = amount,
+                    confidence = 0.94f,
+                    category = "General",
+                    confidenceSource = ConfidenceSource.MEASURED
+                )
+            }
+        }
+
+        // 6. Grand Total / Total Amount / Total Payable (₹ / Rs / INR / $)
+        if (lower.contains("grand total") || lower.contains("total amount") || lower.contains("total payable") || lower.contains("net payable") || lower.contains("rounded payable") || lower.matches(Regex("(?i)^\\s*total\\s*[:=₹Rs$€£].*")) || lower.matches(Regex("(?i)^\\s*total\\s+[₹Rs$€£]?\\s*[\\d,]+(\\.\\d{2})?\\s*$"))) {
             val amount = extractAmount(line)
             if (amount.isNotBlank()) {
                 return ExtractedField(
                     key = "Grand Total",
+                    value = amount,
+                    confidence = 0.98f,
+                    category = "Financial",
+                    confidenceSource = ConfidenceSource.MEASURED
+                )
+            }
+        }
+
+        // 7. Subtotal / Taxable Amount
+        if (lower.contains("subtotal") || lower.contains("sub total") || lower.contains("taxable value") || lower.contains("taxable amount")) {
+            val amount = extractAmount(line)
+            if (amount.isNotBlank()) {
+                return ExtractedField(
+                    key = "Subtotal",
                     value = amount,
                     confidence = 0.96f,
                     category = "Financial",
@@ -403,8 +442,8 @@ class OnDeviceNeuralDocumentAnalyzer private constructor() : OfflineAiEngine {
             }
         }
 
-        // 6. Tax / CGST / SGST / IGST
-        if (lower.contains("cgst") || lower.contains("sgst") || lower.contains("igst") || lower.contains("tax")) {
+        // 8. Specific Tax / CGST / SGST / IGST
+        if (lower.contains("cgst") || lower.contains("sgst") || lower.contains("igst") || (lower.contains("tax") && !lower.contains("tax invoice") && !lower.contains("taxable"))) {
             val amount = extractAmount(line)
             if (amount.isNotBlank()) {
                 val key = when {
@@ -416,18 +455,34 @@ class OnDeviceNeuralDocumentAnalyzer private constructor() : OfflineAiEngine {
                 return ExtractedField(
                     key = key,
                     value = amount,
-                    confidence = 0.94f,
-                    category = "Financial",
+                    confidence = 0.95f,
+                    category = "Tax",
                     confidenceSource = ConfidenceSource.MEASURED
                 )
             }
         }
 
-        // 7. Date (DD/MM/YYYY or DD-MM-YYYY)
+        // 9. Invoice / Bill / Document Number
+        if ((lower.contains("invoice no") || lower.contains("invoice #") || lower.contains("bill no") || lower.contains("receipt no")) && !fieldsContainKey(docType, "Invoice No")) {
+            val colonIdx = line.indexOf(':')
+            val numVal = if (colonIdx != -1 && colonIdx < line.length - 1) line.substring(colonIdx + 1).trim() else line.replace(Regex("(?i)invoice\\s*(no|#|num|number)?[:=]?"), "").trim()
+            if (numVal.isNotBlank() && numVal.length >= 2) {
+                return ExtractedField(
+                    key = "Invoice No",
+                    value = numVal,
+                    confidence = 0.96f,
+                    category = "Identifier",
+                    confidenceSource = ConfidenceSource.MEASURED
+                )
+            }
+        }
+
+        // 10. Date (DD/MM/YYYY or DD-MM-YYYY or DD MMM YYYY)
         val dateMatch = Regex("\\b(\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4})\\b").find(line)
-        if (dateMatch != null && (lower.contains("date") || lower.contains("dt") || lower.contains("dated"))) {
+        if (dateMatch != null && (lower.contains("date") || lower.contains("dt") || lower.contains("dated") || lower.contains("due"))) {
+            val key = if (lower.contains("due")) "Due Date" else "Document Date"
             return ExtractedField(
-                key = "Document Date",
+                key = key,
                 value = dateMatch.value,
                 confidence = 0.95f,
                 category = "Temporal",
@@ -435,13 +490,13 @@ class OnDeviceNeuralDocumentAnalyzer private constructor() : OfflineAiEngine {
             )
         }
 
-        // 8. Academic SGPA / CGPA
+        // 11. Academic SGPA / CGPA
         val gpaMatch = Regex("\\b(SGPA|CGPA|GPA)\\s*[:=]?\\s*(\\d+\\.\\d{1,2})\\b", RegexOption.IGNORE_CASE).find(line)
         if (gpaMatch != null) {
             return ExtractedField(
                 key = gpaMatch.groupValues[1].uppercase(),
                 value = gpaMatch.groupValues[2],
-                confidence = 0.96f,
+                confidence = 0.97f,
                 category = "Academic",
                 confidenceSource = ConfidenceSource.MEASURED
             )
@@ -450,13 +505,16 @@ class OnDeviceNeuralDocumentAnalyzer private constructor() : OfflineAiEngine {
         return null
     }
 
+    private fun fieldsContainKey(docType: DocumentType, key: String): Boolean = false
+
     private fun extractAmount(line: String): String {
         val colonIdx = line.indexOf(':')
         if (colonIdx != -1 && colonIdx < line.length - 1) {
-            return line.substring(colonIdx + 1).trim()
+            val candidate = line.substring(colonIdx + 1).trim()
+            if (candidate.isNotBlank()) return candidate
         }
         val currencyMatch = Regex("([₹Rs$€£]?\\s*[\\d,]+(\\.\\d{2})?)").find(line)
-        return currencyMatch?.value?.trim() ?: line
+        return currencyMatch?.value?.trim() ?: line.trim()
     }
 
     private fun computeFieldConfidence(key: String, value: String): Float {
