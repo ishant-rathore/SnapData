@@ -53,7 +53,10 @@ import com.example.snapdata.sample.SampleDocument
 import com.example.snapdata.sample.SampleDocumentRepository
 import com.example.snapdata.ui.AppScreen
 import com.example.snapdata.ui.SnapDataViewModel
+import com.example.snapdata.ui.camera.CameraPreview
+import com.example.snapdata.ui.camera.rememberCameraController
 import com.example.snapdata.ui.theme.*
+import java.io.File
 
 enum class ScanMode { SINGLE, BATCH }
 
@@ -62,6 +65,7 @@ enum class ScanMode { SINGLE, BATCH }
 fun AcquisitionScreen(viewModel: SnapDataViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val cameraController = rememberCameraController()
 
     var isFlashOn by remember { mutableStateOf(false) }
     var selectedScanMode by remember { mutableStateOf(ScanMode.SINGLE) }
@@ -71,16 +75,17 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
     var showConfidenceBadges by remember { mutableStateOf(true) }
     var isLiveScanningActive by remember { mutableStateOf(true) }
     var selectedBlockId by remember { mutableStateOf<String?>(null) }
+    var isCapturing by remember { mutableStateOf(false) }
+
+    var hasCameraPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        )
+    }
 
     var showRationaleDialog by remember { mutableStateOf(false) }
     var showPermanentlyDeniedDialog by remember { mutableStateOf(false) }
     var showCameraUnavailableDialog by remember { mutableStateOf(false) }
-
-    val takePictureLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        viewModel.onCameraCaptureResult(success)
-    }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -102,13 +107,11 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            val uri = viewModel.prepareCameraTempUri()
-            if (uri != null) {
-                takePictureLauncher.launch(uri)
-            } else {
-                Toast.makeText(context, "Unable to initialize capture storage", Toast.LENGTH_SHORT).show()
-            }
+            hasCameraPermission = true
+            AppLogger.i(AppLogger.LogDomain.CAMERA, "Camera permission granted by user")
         } else {
+            hasCameraPermission = false
+            AppLogger.w(AppLogger.LogDomain.CAMERA, "CAMERA_PERMISSION_DENIED: User denied camera permission")
             val activity = context as? Activity
             if (activity != null && !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)) {
                 showPermanentlyDeniedDialog = true
@@ -118,19 +121,9 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
         }
     }
 
-    fun startCameraCapture() {
-        if (!isCameraAvailable(context)) {
-            showCameraUnavailableDialog = true
-            return
-        }
-
-        val permissionCheck = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
-            val uri = viewModel.prepareCameraTempUri()
-            if (uri != null) {
-                takePictureLauncher.launch(uri)
-            }
-        } else {
+    // Auto-request permission on screen entry if not granted
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
             val activity = context as? Activity
             if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)) {
                 showRationaleDialog = true
@@ -145,6 +138,58 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
     }
     val detectedBlocks = remember(activeSample, uiState.activeBitmap) {
         generateDetectedBlocks(activeSample, uiState.activeBitmap)
+    }
+
+    fun triggerCapture() {
+        if (isCapturing) return
+
+        // 1. If a sample document is actively selected in Demo Mode, extract it directly
+        if (activeSample != null) {
+            AppLogger.i(AppLogger.LogDomain.CAMERA, "Extracting actively selected sample document: ${activeSample.title}")
+            viewModel.startProcessingPipeline()
+            return
+        }
+
+        // 2. Real Camera Mode: Capture image using CameraX ImageCapture
+        if (!isCameraAvailable(context)) {
+            showCameraUnavailableDialog = true
+            return
+        }
+
+        if (!hasCameraPermission) {
+            val activity = context as? Activity
+            if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)) {
+                showRationaleDialog = true
+            } else {
+                permissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+            return
+        }
+
+        if (!cameraController.isReady) {
+            AppLogger.w(AppLogger.LogDomain.CAMERA, "Camera is still initializing. Please wait...")
+            Toast.makeText(context, "Initializing camera, please try again...", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        isCapturing = true
+        val cacheDir = File(context.cacheDir, "camera_captures").apply { if (!exists()) mkdirs() }
+        val captureFile = File(cacheDir, "snap_${System.currentTimeMillis()}.jpg")
+
+        cameraController.captureImage(
+            context = context,
+            outputFile = captureFile,
+            onSuccess = { uri ->
+                isCapturing = false
+                AppLogger.i(AppLogger.LogDomain.CAMERA, "Camera capture successful, passing to OCR pipeline: $uri")
+                viewModel.setImageUri(uri)
+            },
+            onError = { exc ->
+                isCapturing = false
+                AppLogger.e(AppLogger.LogDomain.CAMERA, "Camera capture failed: ${exc.localizedMessage}", exc)
+                Toast.makeText(context, "Capture failed: ${exc.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        )
     }
 
     Box(
@@ -195,11 +240,11 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(SnapDataRed)
+                                .background(if (activeSample != null) PrimaryBlue else SnapDataRed)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Auto-Detecting Edges",
+                            text = if (activeSample != null) "Demo: ${activeSample.title.take(18)}..." else "Auto-Detecting Edges",
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
@@ -210,7 +255,14 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
                 // Action icons: Flash & Gallery
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     IconButton(
-                        onClick = { isFlashOn = !isFlashOn },
+                        onClick = {
+                            if (cameraController.hasFlashUnit) {
+                                isFlashOn = !isFlashOn
+                                cameraController.setTorch(isFlashOn, context)
+                            } else {
+                                Toast.makeText(context, "Flash unit not available on this device", Toast.LENGTH_SHORT).show()
+                            }
+                        },
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
@@ -245,7 +297,7 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
                 }
             }
 
-            // 2. Camera Viewfinder Area with Corner Brackets
+            // 2. Camera Viewfinder Area with Live CameraX Feed & Overlays
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -255,19 +307,102 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
                     .background(Color(0xFF191816))
                     .testTag("scanner_viewfinder")
             ) {
-                // Live Real-Time Text Detection Visual Overlay
+                // Layer 1: Real Live CameraX Preview Feed
+                if (hasCameraPermission && isCameraAvailable(context)) {
+                    CameraPreview(
+                        modifier = Modifier.fillMaxSize(),
+                        controller = cameraController,
+                        isFlashOn = isFlashOn,
+                        onCameraReady = {
+                            AppLogger.i(AppLogger.LogDomain.CAMERA, "CameraX preview ready and rendering live frames")
+                        },
+                        onCameraError = { err ->
+                            AppLogger.e(AppLogger.LogDomain.CAMERA, "CameraX initialization error: ${err.localizedMessage}", err)
+                        }
+                    )
+                } else if (!hasCameraPermission) {
+                    // Fallback when camera permission is missing
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Camera Permission Required",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Grant camera access to scan physical documents live.",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                            colors = ButtonDefaults.buttonColors(containerColor = SnapDataRed),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Grant Permission", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else {
+                    // Fallback when no camera hardware is available
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NoPhotography,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Camera Hardware Unavailable",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Import a document from Gallery, PDF, or choose a sample below.",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+
+                // Layer 2: Live Real-Time Text Detection Visual Overlay (Rendered over the camera feed)
                 CameraTextDetectionOverlay(
                     detectedBlocks = detectedBlocks,
                     isScanningActive = isLiveScanningActive,
-                    showBoundingBoxes = showBoundingBoxes,
+                    showBoundingBoxes = showBoundingBoxes && activeSample != null,
                     showLaserSweep = showLaserSweep,
-                    showConfidenceBadges = showConfidenceBadges,
+                    showConfidenceBadges = showConfidenceBadges && activeSample != null,
                     selectedBlockId = selectedBlockId,
                     onBlockSelected = { selectedBlockId = it?.id },
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Grid lines if enabled
+                // Layer 3: Grid lines if enabled
                 if (gridEnabled) {
                     Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                         val w = size.width
@@ -280,7 +415,7 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
                     }
                 }
 
-                // Reference style Corner Edge Detection Brackets in Red/White
+                // Layer 4: Reference style Corner Edge Detection Brackets in Red
                 Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                     val w = size.width
                     val h = size.height
@@ -304,31 +439,36 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
                     drawLine(SnapDataRed, Offset(w, h), Offset(w, h - cornerLength), strokeWidth = strokeW)
                 }
 
-                // Extract Fields Quick Button
+                // Layer 5: Extract Fields Quick Button / Live Scan Action
                 Button(
-                    onClick = {
-                        if (activeSample != null) {
-                            viewModel.startProcessingPipeline()
-                        } else {
-                            startCameraCapture()
-                        }
-                    },
+                    onClick = { triggerCapture() },
                     colors = ButtonDefaults.buttonColors(containerColor = SnapDataRed),
                     shape = RoundedCornerShape(24.dp),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+                    enabled = !isCapturing,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 16.dp)
                         .height(44.dp)
                         .testTag("viewfinder_extract_btn")
                 ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Extract ${detectedBlocks.size} Detected Fields",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
+                    if (isCapturing) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Capturing...", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    } else {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (activeSample != null) "Extract ${detectedBlocks.size} Detected Fields" else "Scan & Extract Document",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
 
@@ -339,6 +479,38 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Live Camera Mode Chip
+                item {
+                    Surface(
+                        color = if (activeSample == null) SnapDataRed else Color(0x22FFFFFF),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .clickable {
+                                viewModel.resetAcquisitionMode()
+                            }
+                            .testTag("scan_mode_live_camera")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Videocam,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Live Camera",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
                 items(SampleDocumentRepository.samples) { sample ->
                     Surface(
                         color = if (uiState.activeTitle == sample.title) SnapDataRed else Color(0x22FFFFFF),
@@ -445,7 +617,7 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
                         .clip(CircleShape)
                         .background(Color(0x33FFFFFF))
                         .padding(6.dp)
-                        .clickable { startCameraCapture() }
+                        .clickable { triggerCapture() }
                         .testTag("shutter_capture_btn"),
                     contentAlignment = Alignment.Center
                 ) {
@@ -572,12 +744,8 @@ fun AcquisitionScreen(viewModel: SnapDataViewModel) {
 
 private fun isCameraAvailable(context: Context): Boolean {
     val pm = context.packageManager
-    val hasHardware = pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) ||
+    return pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) ||
             pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)
-    if (!hasHardware) return false
-
-    val captureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-    return captureIntent.resolveActivity(pm) != null
 }
 
 private fun openAppSettings(context: Context) {
@@ -643,39 +811,7 @@ private fun generateDetectedBlocks(
         return blocks
     }
 
-    return listOf(
-        DetectedTextBlock(
-            id = "blk_1",
-            text = "TAX INVOICE / RECEIPT",
-            category = "Header",
-            confidence = 0.98f,
-            relativeLeft = 0.12f,
-            relativeTop = 0.09f,
-            relativeRight = 0.88f,
-            relativeBottom = 0.16f,
-            isKeyData = true
-        ),
-        DetectedTextBlock(
-            id = "blk_2",
-            text = "INV-2026-84910",
-            category = "Invoice Number",
-            confidence = 0.96f,
-            relativeLeft = 0.10f,
-            relativeTop = 0.18f,
-            relativeRight = 0.52f,
-            relativeBottom = 0.25f,
-            isKeyData = true
-        ),
-        DetectedTextBlock(
-            id = "blk_3",
-            text = "TOTAL DUE: ₹1,41,600.00",
-            category = "Amount",
-            confidence = 0.99f,
-            relativeLeft = 0.30f,
-            relativeTop = 0.56f,
-            relativeRight = 0.90f,
-            relativeBottom = 0.65f,
-            isKeyData = true
-        )
-    )
+    // In live camera mode without a selected sample document, return empty list so truthful HUD is displayed
+    return emptyList()
 }
+

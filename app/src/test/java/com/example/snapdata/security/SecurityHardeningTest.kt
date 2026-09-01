@@ -89,13 +89,13 @@ class SecurityHardeningTest {
         val clean1 = SafeFilenameUtil.sanitizeBaseName(malicious1)
         assertFalse("Must not contain ../ traversal", clean1.contains(".."))
         assertFalse("Must not contain / slashes", clean1.contains("/"))
-        assertEquals("etcpasswd", clean1)
+        assertEquals("etc_passwd", clean1)
 
         val malicious2 = "..\\..\\windows\\system32\\cmd.exe"
         val clean2 = SafeFilenameUtil.sanitizeBaseName(malicious2)
         assertFalse("Must not contain ..\\ traversal", clean2.contains(".."))
         assertFalse("Must not contain backslashes", clean2.contains("\\"))
-        assertEquals("windowssystem32cmd.exe", clean2)
+        assertEquals("windows_system32_cmd.exe", clean2)
     }
 
     @Test
