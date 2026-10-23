@@ -1,0 +1,30 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Firebase project configuration (provide locally when needed)
+app/google-services.json
+
+# Gradle / Android build outputs
+.gradle/
+**/.gradle/
+**/build/
+local.properties
+
+# IDE and editor files
+.idea/
+*.iml
+.vscode/
+
+# Signing material
+*.jks
+*.keystore
+
+# Generated output, logs, and OS files
+*.log
+*.apk
+*.aab
+.DS_Store
+Thumbs.db
